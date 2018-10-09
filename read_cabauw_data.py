@@ -91,6 +91,8 @@ def plot_windprofiles(ax, j):
 
 for j in range(len(ax.flat)):
     plot_windprofiles(ax.flat[j],j)
+    if j == 0:
+        ax.flat[j].set_xlabel('u (m/s)'); ax.flat[j].set_ylabel('v (m/s)')
 plt.figlegend(handles_windprofile, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12 )
 plt.figlegend(handles_windprofile, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
 plt.savefig('wind.jpg', dpi = 120, bbox_inches = 'tight')
@@ -143,6 +145,8 @@ def plot_windcycles(ax, j):
 
 for j in range(len(ax.flat)):
     plot_windcycles(ax.flat[j], j)
+    if j == 0:
+        ax.flat[j].set_xlabel('u (m/s)'); ax.flat[j].set_ylabel('v (m/s)')
 plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights], loc = [0.37,0.05], ncol = 3, labelspacing=0., fontsize = 12 )
 plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
 plt.savefig('wind_cycle.jpg', dpi = 120, bbox_inches = 'tight')
@@ -168,6 +172,8 @@ def plot_thetaprofiles(ax, j):
 
 for j in range(len(ax.flat)):
     plot_thetaprofiles(ax.flat[j], j)
+    if j == 0:
+        ax.flat[j].set_xlabel('$\\theta$ (K)'); ax.flat[j].set_ylabel('h (m)')
 plt.figlegend(handles_theta, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12)
 plt.figlegend(handles_theta, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.925,0.5], ncol = 1, labelspacing=0., fontsize = 12)
 plt.savefig('theta.jpg', dpi = 120, bbox_inches = 'tight')
@@ -179,6 +185,10 @@ for i in range(len(ax)):
     plot_thetaprofiles(ax[i][0], i)
     plot_windprofiles(ax[i][1], i)
     plot_windcycles(ax[i][2], i)
+    if i == 0:
+        ax[i][0].set_xlabel('$\\theta$ (K)'); ax[i][0].set_ylabel('h (m)')
+        ax[i][1].set_xlabel('u (m/s)'); ax[i][1].set_ylabel('v (m/s)')
+        ax[i][2].set_xlabel('u (m/s)'); ax[i][2].set_ylabel('v (m/s)')
 plt.figlegend(handles_theta, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.12,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
 plt.figlegend(handles_windprofile, [format(j, '02d')+'Z' for j in plot_hours], loc = [0.44,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
 plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights], loc = [0.78,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
