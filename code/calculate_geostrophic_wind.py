@@ -71,7 +71,7 @@ def calculate_geostrophic_wind():
     distances_to_cabauw = {j: ft.haversine(coords[cabauw_id][0], coords[cabauw_id][1], coords[j][0], coords[j][1]) for j in coords if not j == cabauw_id}
     max_distance = 75 #km
     selected_stations = [j for j in distances_to_cabauw if distances_to_cabauw[j] < max_distance and j in pressures and not np.isnan(pressures[j][0][0])]
-    print('selected_stations: ',[j[-1] for j in coords_data if int(j[1][:-1]) in selected_stations and distances_to_cabauw[int(j[1][:-1])] < 75])
+    #print('selected_stations: ',[j[-1] for j in coords_data if int(j[1][:-1]) in selected_stations and distances_to_cabauw[int(j[1][:-1])] < 75])
     
     
     selected_pressures = np.zeros((n_dates, n_times, len(selected_stations)))
@@ -107,8 +107,9 @@ def calculate_geostrophic_wind():
     for i in range(0, V_g.shape[1] - 1):
         V_g_interpolated[:, 3 + 6*i : 9 + 6*i] = V_g[:, np.newaxis, i]
 
-    gw_data.V_g = V_g
-    gw_data.V_g_interpolated = V_g_interpolated
+    gw_data.V_g = V_g_interpolated
+    gw_data.V_g_speed = np.linalg.norm(gw_data.V_g, axis = 2)
+    gw_data.V_g_direction = 180./ np.pi * (np.arctan2(gw_data.V_g[:,:,0], gw_data.V_g[:,:,1]) + np.pi)
     gw_data.dates = dates
     gw_data.hours = hours
     
@@ -117,12 +118,9 @@ def calculate_geostrophic_wind():
 
 if __name__ == '__main__':
     #This part is not executed when importing this script, only when running this as the main script.
-    fig, ax = plt.subplots(1, 2)
+    fig, ax = plt.subplots(1, 1)
     
     gw_data = calculate_geostrophic_wind()
-    V_g_speed = np.linalg.norm(gw_data.V_g, axis = 2)
-    V_g_speed_interpolated = np.linalg.norm(gw_data.V_g_interpolated, axis = 2)
 
-    ax[0].plot(gw_data.dates[:744].astype(float) + gw_data.hours[:744].astype(float) / 24, V_g_speed.flatten())
-    ax[1].plot(V_g_speed_interpolated.flatten())
+    ax.plot(gw_data.V_g_speed.flatten())
     plt.show()
