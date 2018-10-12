@@ -44,6 +44,8 @@ def read_and_process_cabauw_data():
     #- signs, because direction gives the direction from which the wind is blowing, and not to which the wind is blowing.
     data.u = - data.speed * np.sin(data.direction * np.pi/180.)
     data.v = - data.speed * np.cos(data.direction * np.pi/180.)
+    data.V = np.zeros(data.u.shape + (2,))
+    data.V[:,:,:,0] = data.u; data.V[:,:,:,1] = data.v
     data.T = np.reshape(T, data.speed.shape)
     data.theta = data.T + g/Cp*z[np.newaxis, np.newaxis, :]
     data.Td = np.reshape(Td, data.speed.shape)
