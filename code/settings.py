@@ -8,7 +8,7 @@ import calendar
 
 
 year = '2018'
-month = '08'
+month = '01'
 n_days = calendar.monthrange(int(year), int(month))[1]
 
 data_path = '../data/'
