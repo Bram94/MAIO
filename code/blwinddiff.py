@@ -15,9 +15,15 @@ months = months = list(range(1, 9))
 data = r.read_and_process_cabauw_data(months = months)
 gw_data = gw.calculate_geostrophic_wind(months = months)
 
-delta_V = np.linalg.norm(data.V[:,:,0] - data.V[:,:,-2], axis = 2)
-Vg_speed = gw_data.V_g_speed
-dtheta = data.theta[:,:,0] - data.theta[:,:,-1] #Difference in theta between 2 and 200 m
+delta_V = np.linalg.norm(data.V[:,:,0] - data.V[:,:,-2], axis = 2).flatten()
+Vg_speed = gw_data.V_g_speed.flatten()
+dtheta = (data.theta[:,:,0] - data.theta[:,:,-1]).flatten() #Difference in theta between 2 and 200 m
+
+
+
+max_deltaV = delta_V.max()
+bin_size_deltaV = 1
+n_bins_deltaV = int(max_deltaV / bin_size_deltaV)
 
 
 
@@ -25,21 +31,31 @@ max_Vg_speed = Vg_speed.max()
 bin_size_Vgspeed = 2.5 #In m/s
 n_bins_Vgspeed = int(np.ceil(max_Vg_speed / bin_size_Vgspeed))
 delta_V_mean_Vgspeed_binned = np.zeros((n_bins_Vgspeed, 2)) #First element of second axis gives mean geostrophic wind speed for the bin, second gives the mean delta_V
+delta_V_sampledensity_Vgspeed = np.zeros(len(delta_V))
 for i in range(n_bins_Vgspeed):
     delta_V_mean_Vgspeed_binned[i, 0] = (i + 0.5) * bin_size_Vgspeed
-    delta_V_mean_Vgspeed_binned[i, 1] = np.mean(delta_V[(Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed)])
-
+    delta_Vs_in_bin = (Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed)
+    delta_V_mean_Vgspeed_binned[i, 1] = np.mean(delta_V[delta_Vs_in_bin]) if np.count_nonzero(delta_Vs_in_bin) >= 10 else np.nan
+    for j in range(n_bins_deltaV):
+        delta_Vs_in_bin_j = delta_Vs_in_bin & (delta_V >= j * bin_size_deltaV) & (delta_V < (j+1) * bin_size_deltaV)
+        delta_V_sampledensity_Vgspeed[delta_Vs_in_bin_j] = np.count_nonzero(delta_Vs_in_bin_j)
+    
 
 
 min_dtheta = dtheta.min(); max_dtheta = dtheta.max()
-bin_size_dtheta = 2 #K
+bin_size_dtheta = 1 #K
 n_bins_dtheta = int(np.ceil((max_dtheta - min_dtheta) / bin_size_dtheta))
 bins_min_dtheta = int(np.floor(min_dtheta/bin_size_dtheta)) * bin_size_dtheta
 
 delta_V_mean_dtheta_binned = np.zeros((n_bins_dtheta, 2))
+delta_V_sampledensity_dtheta = np.zeros(len(delta_V))
 for i in range(n_bins_dtheta):
     delta_V_mean_dtheta_binned[i, 0] = bins_min_dtheta + (i + 0.5) * bin_size_dtheta
-    delta_V_mean_dtheta_binned[i, 1] = np.mean(delta_V[(dtheta >= bins_min_dtheta + i * bin_size_dtheta) & (dtheta < bins_min_dtheta + (i+1) * bin_size_dtheta)])
+    delta_Vs_in_bin = (dtheta >= bins_min_dtheta + i * bin_size_dtheta) & (dtheta < bins_min_dtheta + (i+1) * bin_size_dtheta)
+    delta_V_mean_dtheta_binned[i, 1] = np.mean(delta_V[delta_Vs_in_bin]) if np.count_nonzero(delta_Vs_in_bin) >= 10 else np.nan
+    for j in range(n_bins_deltaV):
+        delta_Vs_in_bin_j = delta_Vs_in_bin & (delta_V >= j * bin_size_deltaV) & (delta_V < (j+1) * bin_size_deltaV)
+        delta_V_sampledensity_dtheta[delta_Vs_in_bin_j] = np.count_nonzero(delta_Vs_in_bin_j) 
 
 
 
@@ -59,8 +75,10 @@ for i in range(n_bins_Vgspeed):
 
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-ax[0].plot(Vg_speed, delta_V, 'bo', delta_V_mean_Vgspeed_binned[:,0], delta_V_mean_Vgspeed_binned[:,1], 'r-', markersize = 3)
-ax[1].plot(dtheta, delta_V, 'bo', delta_V_mean_dtheta_binned[:,0], delta_V_mean_dtheta_binned[:,1], 'r-', markersize = 3)
+ax[0].scatter(Vg_speed, delta_V, c = delta_V_sampledensity_Vgspeed)
+ax[0].plot(delta_V_mean_Vgspeed_binned[:,0], delta_V_mean_Vgspeed_binned[:,1], 'r-')
+ax[1].scatter(dtheta, delta_V, c = delta_V_sampledensity_dtheta)
+ax[1].plot(delta_V_mean_dtheta_binned[:,0], delta_V_mean_dtheta_binned[:,1], 'r-')
 ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$||\mathbf{V}$ (200 m) - $\mathbf{V}$ (10 m)$||$ (m/s)')
 ax[1].set_xlabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)'); ax[1].set_ylabel('$||\mathbf{V}$ (200 m) - $\mathbf{V}$ (10 m)$||$ (m/s)')
 plt.show()

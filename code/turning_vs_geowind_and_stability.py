@@ -28,25 +28,41 @@ dtheta = (data.theta[:,:,0] - data.theta[:,:,-1])[not_nan] #Difference in theta 
 
 
 
+max_deltaV = alpha.max()
+bin_size_deltaV = 1
+n_bins_deltaV = int(max_deltaV / bin_size_deltaV)
+
+
+
 max_Vg_speed = Vg_speed.max()
 bin_size_Vgspeed = 2.5 #In m/s
 n_bins_Vgspeed = int(np.ceil(max_Vg_speed / bin_size_Vgspeed))
 alpha_mean_Vgspeed_binned = np.zeros((n_bins_Vgspeed, 2)) #First element of second axis gives mean geostrophic wind speed for the bin, second gives the mean alpha
+alpha_sampledensity_Vgspeed = np.zeros(len(alpha))
 for i in range(n_bins_Vgspeed):
     alpha_mean_Vgspeed_binned[i, 0] = (i + 0.5) * bin_size_Vgspeed
-    alpha_mean_Vgspeed_binned[i, 1] = np.mean(alpha[(Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed)])
-
+    alphas_in_bin = (Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed)
+    alpha_mean_Vgspeed_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= 10 else np.nan
+    for j in range(n_bins_deltaV):
+        alphas_in_bin_j = alphas_in_bin & (alpha >= j * bin_size_deltaV) & (alpha < (j+1) * bin_size_deltaV)
+        alpha_sampledensity_Vgspeed[alphas_in_bin_j] = np.count_nonzero(alphas_in_bin_j)
+    
 
 
 min_dtheta = dtheta.min(); max_dtheta = dtheta.max()
-bin_size_dtheta = 2 #K
+bin_size_dtheta = 1 #K
 n_bins_dtheta = int(np.ceil((max_dtheta - min_dtheta) / bin_size_dtheta))
 bins_min_dtheta = int(np.floor(min_dtheta/bin_size_dtheta)) * bin_size_dtheta
 
 alpha_mean_dtheta_binned = np.zeros((n_bins_dtheta, 2))
+alpha_sampledensity_dtheta = np.zeros(len(alpha))
 for i in range(n_bins_dtheta):
     alpha_mean_dtheta_binned[i, 0] = bins_min_dtheta + (i + 0.5) * bin_size_dtheta
-    alpha_mean_dtheta_binned[i, 1] = np.mean(alpha[(dtheta >= bins_min_dtheta + i * bin_size_dtheta) & (dtheta < bins_min_dtheta + (i+1) * bin_size_dtheta)])
+    alphas_in_bin = (dtheta >= bins_min_dtheta + i * bin_size_dtheta) & (dtheta < bins_min_dtheta + (i+1) * bin_size_dtheta)
+    alpha_mean_dtheta_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= 10 else np.nan
+    for j in range(n_bins_deltaV):
+        alphas_in_bin_j = alphas_in_bin & (alpha >= j * bin_size_deltaV) & (alpha < (j+1) * bin_size_deltaV)
+        alpha_sampledensity_dtheta[alphas_in_bin_j] = np.count_nonzero(alphas_in_bin_j) 
 
 
 
@@ -66,8 +82,10 @@ for i in range(n_bins_Vgspeed):
 
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-ax[0].plot(Vg_speed, alpha, 'bo', alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-', markersize = 3)
-ax[1].plot(dtheta, alpha, 'bo', alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-', markersize = 3)
+ax[0].scatter(Vg_speed, alpha, c = alpha_sampledensity_Vgspeed)
+ax[0].plot(alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-')
+ax[1].scatter(dtheta, alpha, c = alpha_sampledensity_dtheta)
+ax[1].plot(alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-')
 ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$|\\alpha|$ $(\degree)$')
 ax[1].set_xlabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)'); ax[1].set_ylabel('$|\\alpha|$ $(\degree)$')
 plt.show()
