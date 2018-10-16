@@ -13,6 +13,7 @@ import calculate_geostrophic_wind as gw
 
 
 months = months = list(range(1, 9))
+#months = [8]
 data = r.read_and_process_cabauw_data(months = months)
 gw_data = gw.calculate_geostrophic_wind(months = months)
 
@@ -65,13 +66,17 @@ for i in range(n_bins_Vgspeed):
 
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-ax[0].plot(Vg_speed, alpha, 'bo', alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-')
-ax[1].plot(dtheta, alpha, 'bo', alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-')
+ax[0].plot(Vg_speed, alpha, 'bo', alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-', markersize = 3)
+ax[1].plot(dtheta, alpha, 'bo', alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-', markersize = 3)
+ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$|\\alpha|$ $(\degree)$')
+ax[1].set_xlabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)'); ax[1].set_ylabel('$|\\alpha|$ $(\degree)$')
 plt.show()
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
 im = ax[0].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,2].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[0])
+plt.colorbar(im, ax = ax[0], orientation = 'horizontal', label = '# of samples per bin')
 im = ax[1].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,3].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[1])
+plt.colorbar(im, ax = ax[1], orientation = 'horizontal', label = '$|\\alpha|$ $(\degree)$')
+ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)', labelpad = -5)
+ax[1].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[1].set_ylabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)', labelpad = -5)
 plt.show()

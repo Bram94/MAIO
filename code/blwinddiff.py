@@ -59,13 +59,17 @@ for i in range(n_bins_Vgspeed):
 
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-ax[0].plot(Vg_speed, delta_V, 'bo', delta_V_mean_Vgspeed_binned[:,0], delta_V_mean_Vgspeed_binned[:,1], 'r-')
-ax[1].plot(dtheta, delta_V, 'bo', delta_V_mean_dtheta_binned[:,0], delta_V_mean_dtheta_binned[:,1], 'r-')
+ax[0].plot(Vg_speed, delta_V, 'bo', delta_V_mean_Vgspeed_binned[:,0], delta_V_mean_Vgspeed_binned[:,1], 'r-', markersize = 3)
+ax[1].plot(dtheta, delta_V, 'bo', delta_V_mean_dtheta_binned[:,0], delta_V_mean_dtheta_binned[:,1], 'r-', markersize = 3)
+ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$||\mathbf{V}$ (200 m) - $\mathbf{V}$ (10 m)$||$ (m/s)')
+ax[1].set_xlabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)'); ax[1].set_ylabel('$||\mathbf{V}$ (200 m) - $\mathbf{V}$ (10 m)$||$ (m/s)')
 plt.show()
 
 fig, ax = plt.subplots(1, 2, figsize = (10, 5))
 im = ax[0].imshow(delta_V_mean_Vgspeed_dtheta_binned[:,:,2].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[0])
+plt.colorbar(im, ax = ax[0], orientation = 'horizontal', label = '# of samples per bin')
 im = ax[1].imshow(delta_V_mean_Vgspeed_dtheta_binned[:,:,3].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[1])
+plt.colorbar(im, ax = ax[1], orientation = 'horizontal', label = '$||\mathbf{V}$ (200 m) - $\mathbf{V}$ (10 m)$||$ (m/s)')
+ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)', labelpad = -5)
+ax[1].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[1].set_ylabel('$\\theta$ (2 m) - $\\theta$ (200 m) (K)', labelpad = -5)
 plt.show()
