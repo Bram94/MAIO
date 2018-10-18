@@ -60,7 +60,7 @@ def read_and_process_cabauw_data(year = None, months = []):
         theta = T + g/Cp*z[np.newaxis, np.newaxis, :]
         Td = np.reshape(Td, speed.shape)
         
-        variables = ['hours','speed','direction','u','v','V','T','theta','Td']
+        variables = ['hours','speed','direction','u','v','V','T','theta','Td','z']
         for j in variables:
             if i == 0:
                 exec('data.'+j+' = '+j)
