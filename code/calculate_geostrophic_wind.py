@@ -57,8 +57,6 @@ def calculate_geostrophic_wind(year = None, months = []):
         #not desired here. With the method below this is circumvented.
         stations_unique_indices = np.unique(stations, return_index = True)[1]
         stations_unique = stations[np.sort(stations_unique_indices)] 
-        dates = data[:,1]
-        hours = data[:,2].astype('int')
         pressures = data[:,3]
         pressures[pressures == ''] = np.nan
         pressures = pressures.astype('float') / 10.
