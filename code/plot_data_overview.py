@@ -35,7 +35,7 @@ for i in range(8,9):
             time_index = np.argmin(np.abs(data.hours - hour))
             
             u_j, v_j = data.u[j, time_index, :-1], data.v[j, time_index, :-1] #Exclude the last element as it is np.nan
-            u_g = gw_data.V_g_interpolated[j, time_index, 0]; v_g = gw_data.V_g_interpolated[j, time_index, 1]
+            u_g = gw_data.V_g[j, time_index, 0]; v_g = gw_data.V_g[j, time_index, 1]
             ax.plot(u_j, v_j, color = colors[i], marker = 'o', markersize = 3)
             ax.plot(u_g, v_g, color = colors[i], marker = 'o', markersize = 5)
             
@@ -108,7 +108,7 @@ for i in range(8,9):
             for k in (0, -1):
                 ax.text(u_j[k], v_j[k], 's' if k == 0 else 'e', fontsize = 12)
     
-        u_g = gw_data.V_g_interpolated[j, :, 0]; v_g = gw_data.V_g_interpolated[j, :, 1]    
+        u_g = gw_data.V_g[j, :, 0]; v_g = gw_data.V_g[j, :, 1]    
         ax.plot(u_g, v_g, color = 'black', marker = 'o', markersize = 1.5)
         handles_windcycle.append(ax.plot(u_g, v_g, color = 'black', linestyle = '-', linewidth = 0.75)[0])
         for k in (0, -1):
