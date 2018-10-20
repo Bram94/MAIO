@@ -13,19 +13,21 @@ g = 9.81
 Cp = 1005
 
 
-class Cabauw_Data():
+class Cabauw_Data(object):
     """Class to which data can be assigned
     """
     def __init__(self):
         pass
     
     
-def read_and_process_cabauw_data(year = None, months = []): 
+def read_and_process_cabauw_data(years = [], months = []): 
     """This function reads and processes Cabauw data, and returns a data object that contains the relevant datasets as attributes.
     If year and months are unspecified, then the year and month specified in settings.py are used.
-    Otherwise months should be a list with the months that need to be considered.
+    Otherwise both should be lists with the same length, that contain the years and months that need to be considered, 
+    in which the ith year corresponds to the ith month.
     """
-    year = s.year if year is None else str(year)
+    if len(years) == 0: years = [s.year]
+    else: years = [str(j) for j in years]
     if len(months) == 0: months = [s.month]
     else: months = [j if isinstance(j, str) else format(j, '02d') for j in months]
 
@@ -33,7 +35,7 @@ def read_and_process_cabauw_data(year = None, months = []):
         
     n_days = 0
     for i in range(len(months)):
-        f = xr.open_dataset(s.data_path+'cesar_tower_meteo_lc1_t10_v1.0_'+year+months[i]+'.nc', decode_times = False)
+        f = xr.open_dataset(s.data_path+'cesar_tower_meteo_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)
         time = np.array(f.variables['time']) #Is given in hours, with data every 10 minutes
         z = np.array(f.variables['z'])
         speed = np.array(f.variables['F'])
@@ -60,11 +62,16 @@ def read_and_process_cabauw_data(year = None, months = []):
         theta = T + g/Cp*z[np.newaxis, np.newaxis, :]
         Td = np.reshape(Td, speed.shape)
         
-        variables = ['hours','speed','direction','u','v','V','T','theta','Td','z']
+        
+        #Import the second file that contains a.o. surface pressures
+        f2 = xr.open_dataset(s.data_path+'cesar_surface_meteo_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)
+        p0 = np.reshape(np.array(f2.variables['P0']), speed.shape[:2])
+        
+        variables = ['hours','speed','direction','u','v','V','T','theta','Td','z','p0']
         for j in variables:
             if i == 0:
                 exec('data.'+j+' = '+j)
-            else:
+            elif j != 'z':
                 exec('data.'+j+' = np.concatenate([data.'+j+','+j+'], axis = 0)')
                          
     return data #Return data object with the data as attributes

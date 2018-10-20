@@ -51,3 +51,17 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * math.asin(math.sqrt(a)) 
     r = 6371 # Radius of earth in kilometers. Use 3956 for miles
     return c * r
+
+def RK4(f, y, dt, t = None):
+    #f = f(y, t = None)
+    if not t is None:
+        k1 = f(y, t)
+        k2 = f(y + k1/2., t + dt/2.)
+        k3 = f(y + k2/2., t + dt/2.)
+        k4 = f(y + k3, t + dt)
+    else:
+        k1 = f(y)
+        k2 = f(y + k1/2.)
+        k3 = f(y + k2/2.)
+        k4 = f(y + k3)
+    return dt/6. * (k1 + 2.*k2 + 2.*k3 + k4) # = dy

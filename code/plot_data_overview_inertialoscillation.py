@@ -14,18 +14,40 @@ import settings as s
 
 year = 2018
 for i in range(1,9):
-    n_days = calendar.monthrange(year, i)[1]
+    months = [i-1, i] if i > 1 else [12, i]
+    years = [year, year] if i > 1 else [year - 1, year]
+    n_days = [calendar.monthrange(int(years[k]), int(months[k]))[1] for k in range(len(months))]
     
-    gw_data = gw.calculate_geostrophic_wind(years = [year], months = [i])
+    gw_data = gw.calculate_geostrophic_wind(years, months)
         
-    data = r.read_and_process_cabauw_data(years = [year], months = [i])    
+    data = r.read_and_process_cabauw_data(years, months)
     
         
+    """Plots are now created for the period from 12 to 12 UTC, instead of 0 to 0 UTC.
+    For a given date, the time range is from 12 UTC at the previous date to 12 UTC at the given date.
+    In order to plot the data for this time range, all datasets are below shifted backward in time by
+    12 hours.
+    """
+    shift = 72
+    for j in data.__dict__:
+        if len(eval('data.'+j).shape) >=2:
+            exec('data.'+j+'= np.reshape(data.'+j+', (data.'+j+'.shape[0] * data.'+j+'.shape[1],) + (data.'+j+'.shape[2:] if len(data.'+j+'.shape) > 2 else ()))')
+            exec('data.'+j+'=data.'+j+'[n_days[0] * 144 - shift: - shift]')
+            exec('data.'+j+'=np.reshape(data.'+j+', (n_days[-1], 144) + (data.'+j+'.shape[1:] if len(data.'+j+'.shape) > 1 else ()))')
+    
+    for j in gw_data.__dict__:
+        if len(eval('gw_data.'+j).shape) >=2:
+            exec('gw_data.'+j+'= np.reshape(gw_data.'+j+', (gw_data.'+j+'.shape[0] * gw_data.'+j+'.shape[1],) + (gw_data.'+j+'.shape[2:] if len(gw_data.'+j+'.shape) > 2 else ()))')
+            exec('gw_data.'+j+'=gw_data.'+j+'[n_days[0] * 144 - shift: - shift]')
+            exec('gw_data.'+j+'=np.reshape(gw_data.'+j+', (n_days[-1], 144) + (gw_data.'+j+'.shape[1:] if len(gw_data.'+j+'.shape) > 1 else ()))')
+            
+    
+    
     #%%
     figure_numbers_pos = [-0.125, 1.04]
     
-    fig, ax = plt.subplots(int(np.ceil(n_days/5)),5, figsize = (20,20))
-    plot_hours = np.array([0, 6, 12, 18])
+    fig, ax = plt.subplots(int(np.ceil(n_days[-1]/5)),5, figsize = (20,20))
+    plot_hours = np.array([12, 18, 0, 6])
     colors = ['blue', 'red', 'green', 'yellow']
     
     handles_windprofile = []
@@ -78,14 +100,14 @@ for i in range(1,9):
             if j == 0:
                 ax.flat[j].set_xlabel('u (m/s)'); ax.flat[j].set_ylabel('v (m/s)')
         except Exception: continue #Will occur when j >= n_days
-    plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
+    plt.suptitle('12Z previous day - 12Z current day', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12 )
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
-    plt.savefig(s.imgs_path+'00Z-00Z_wind_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'12Z-12Z_wind_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
-    fig, ax = plt.subplots(int(np.ceil(n_days/5)),5, figsize = (20,20))
+    fig, ax = plt.subplots(int(np.ceil(n_days[-1]/5)),5, figsize = (20,20))
     plot_heights = [10, 80, 200]
     colors = ['blue', 'red', 'green', 'yellow']
     
@@ -144,14 +166,14 @@ for i in range(1,9):
             if j == 0:
                 ax.flat[j].set_xlabel('u (m/s)'); ax.flat[j].set_ylabel('v (m/s)')
         except Exception: continue #Will occur when j >= n_days
-    plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
+    plt.suptitle('12Z previous day - 12Z current day', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12 )
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
-    plt.savefig(s.imgs_path+'00Z-00Z_wind_cycle_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'12Z-12Z_wind_cycle_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
-    fig, ax = plt.subplots(int(np.ceil(n_days/5)),5, figsize = (20,20))
+    fig, ax = plt.subplots(int(np.ceil(n_days[-1]/5)),5, figsize = (20,20))
     
     handles_theta = []
     def plot_thetaprofiles(ax, j):
@@ -174,14 +196,14 @@ for i in range(1,9):
             if j == 0:
                 ax.flat[j].set_xlabel('$\\theta$ (K)'); ax.flat[j].set_ylabel('h (m)')
         except Exception: continue #Will occur when j >= n_days
-    plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
+    plt.suptitle('12Z previous day - 12Z current day', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_theta, [format(j, '02d')+'z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12)
     plt.figlegend(handles_theta, [format(j, '02d')+'z' for j in plot_hours], loc = [0.925,0.5], ncol = 1, labelspacing=0., fontsize = 12)
-    plt.savefig(s.imgs_path+'00Z-00Z_theta_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'12Z-12Z_theta_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
-    fig, ax = plt.subplots(n_days, 3, figsize = (12, 100))
+    fig, ax = plt.subplots(n_days[-1], 3, figsize = (12, 100))
     for j in range(len(ax)):
         plot_thetaprofiles(ax[j][0], j)
         plot_windprofiles(ax[j][1], j)
@@ -190,10 +212,10 @@ for i in range(1,9):
             ax[j][0].set_xlabel('$\\theta$ (K)'); ax[j][0].set_ylabel('h (m)')
             ax[j][1].set_xlabel('u (m/s)'); ax[j][1].set_ylabel('v (m/s)')
             ax[j][2].set_xlabel('u (m/s)'); ax[j][2].set_ylabel('v (m/s)')
-    plt.suptitle('00Z - 00Z', x = 0.5, y = 0.885, fontweight = 'bold', fontsize = 14)
+    plt.suptitle('12Z previous day - 12Z current day', x = 0.5, y = 0.885, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_theta, [format(j, '02d')+'z' for j in plot_hours], loc = [0.12,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.44,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.78,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
     
-    plt.savefig(s.imgs_path+'00Z-00Z_combi_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'12Z-12Z_combi_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
