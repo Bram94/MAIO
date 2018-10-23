@@ -7,7 +7,7 @@ Created on Wed Oct 10 16:01:48 2018
 import calendar
 
 
-year = '2017'
+year = '2018'
 month = '12'
 n_days = calendar.monthrange(int(year), int(month))[1]
 

@@ -26,13 +26,12 @@ def read_and_process_cabauw_data(years = [], months = []):
     Otherwise both should be lists with the same length, that contain the years and months that need to be considered, 
     in which the ith year corresponds to the ith month.
     """
-    if len(years) == 0: years = [s.year]
-    else: years = [str(j) for j in years]
     if len(months) == 0: months = [s.month]
     else: months = [j if isinstance(j, str) else format(j, '02d') for j in months]
+    if len(years) == 0: years = [s.year for j in months]
+    else: years = [str(j) for j in years]
 
     data = Cabauw_Data()
-        
     n_days = 0
     for i in range(len(months)):
         f = xr.open_dataset(s.data_path+'cesar_tower_meteo_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)

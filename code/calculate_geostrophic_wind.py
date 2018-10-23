@@ -28,10 +28,10 @@ def calculate_geostrophic_wind(years = [], months = []):
     If year and months are unspecified, then the year and month specified in settings.py are used.
     Otherwise months should be a list with the months that need to be considered.
     """
-    if len(years) == 0: years = [s.year]
-    else: years = [str(j) for j in years]
     if len(months) == 0: months = [s.month]
     else: months = [j if isinstance(j, str) else format(j, '02d') for j in months]
+    if len(years) == 0: years = [s.year for j in months]
+    else: years = [str(j) for j in years]
     n_days = [calendar.monthrange(int(years[k]), int(months[k]))[1] for k in range(len(months))]
     
     gw_data = GeoWind()

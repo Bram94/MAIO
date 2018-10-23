@@ -43,7 +43,7 @@ for i in range(1, len(data.z)):
     p_200m += ft.RK4(f_dpdz_dTdz, np.array([p_200m, data.T[:,:,-i]]), dz)[0]
 V_thermal = R / f * np.array([[[-1, 1]]]) * tg_data.T_gradient_xy[:,:,::-1] * np.log(p_200m / p_0)[:,:,np.newaxis]
 
-
+#%%
 Vg = gw_data.V_g[:,:,np.newaxis,:] + (data.z[np.newaxis, np.newaxis, :-1, np.newaxis] - 1.5) / 198.5 * V_thermal[:,:,np.newaxis,:]
 Vg_speed = np.linalg.norm(Vg, axis = 3)
 Vg_speed_0 = Vg_speed[:,:,-1]
