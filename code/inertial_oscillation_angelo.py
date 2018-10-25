@@ -163,16 +163,24 @@ normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix
 
 
 plt.figure(figsize = (15, 10))
-colors = ['green', 'yellow', 'red', 'pink', 'purple', 'blue']
+colors = ['green', 'yellow', 'red', 'pink', 'purple', 'blue', 'black']
 height_indices = list(range(len(data.z) - 1))
 for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
     j = height_indices[i]
     mean_profile = np.mean(normalized_V[:,:,j], axis = 0)
-    plt.plot(mean_profile[:, 0], mean_profile[:, 1], colors[i], linewidth = 3)
+    plt.plot(mean_profile[:, 0], mean_profile[:, 1], colors[i], linewidth = 4)
+#Plot the analytical Ekman profile
+z = np.arange(0,10,0.1)
+u_a = 1. - np.exp(-z) * np.cos(z)
+v_a = np.exp(-z) * np.sin(z)
+plt.plot(u_a, v_a, colors[-1], linewidth = 3)
+
+plt.axes().set_aspect('equal', 'box')
 plt.grid()
+plt.xlim([-0.1, 1.7]); plt.ylim([-0.2, 0.7])
 plt.xlabel('u / G'); plt.ylabel('v / G')
-plt.title('Normalized wind profiles from 18 to 06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
-plt.legend([str(int(data.z[j]))+' m' for j in height_indices])
+plt.title('Average normalized wind profiles from 18-06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
+plt.legend([str(int(data.z[j]))+' m' for j in height_indices] + ['Ekman'])
 plt.savefig(s.imgs_path+'inertial_oscillation.jpg', dpi = 120, bbox_inches = 'tight')
 plt.show()
 
