@@ -117,7 +117,7 @@ for data_time_range in data_time_ranges:
     for i in range(len(stability_classes)-1, -1, -1):
         c = str(stability_classes[i])
         legend_handles.append(plt.plot(data_means_classes[c]['normalized_V'][:,0], data_means_classes[c]['normalized_V'][:,1], colors[i], linewidth = 6)[0])
-        index_diff = 6
+        index_diff = 4
         normal_vector = np.cross([0, 0, 1], np.concatenate([[data_means_classes[c]['normalized_V'][index_diff-1] - data_means_classes[c]['normalized_V'][0] for j in range(1, index_diff//2 + 1)], data_means_classes[c]['normalized_V'][index_diff:] - data_means_classes[c]['normalized_V'][:-index_diff], [data_means_classes[c]['normalized_V'][-1] - data_means_classes[c]['normalized_V'][-index_diff] for j in range(2, index_diff//2 + 2)]], axis = 0))[:,:2]
         #Normalize the normal vector
         normal_vector /= np.linalg.norm(normal_vector, axis = 1)[:, np.newaxis]
