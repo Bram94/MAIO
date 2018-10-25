@@ -12,8 +12,8 @@ import calculate_geostrophic_wind as gw
 import read_cabauw_data as r
 import settings as s
 
-year = 2018
-for i in range(1,9):
+year = 2013
+for i in range(5, 6):
     months = [i-1, i] if i > 1 else [12, i]
     years = [year, year] if i > 1 else [year - 1, year]
     n_days = [calendar.monthrange(int(years[k]), int(months[k]))[1] for k in range(len(months))]

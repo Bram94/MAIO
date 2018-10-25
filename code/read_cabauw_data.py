@@ -66,8 +66,13 @@ def read_and_process_cabauw_data(years = [], months = []):
         #Import the second file that contains a.o. surface pressures
         f2 = xr.open_dataset(s.data_path+'cesar_surface_meteo_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)
         p0 = np.reshape(np.array(f2.variables['P0']), speed.shape[:2])
+                        
+        #Import the third file that contains radiation data
+        f3 = xr.open_dataset(s.data_path+'cesar_surface_radiation_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)
+        longwave_upward = np.reshape(np.array(f3.variables['LWU']), speed.shape[:2])   
+        longwave_downward = np.reshape(np.array(f3.variables['LWD']), speed.shape[:2])  
         
-        variables = ['hours','speed','direction','u','v','V','T','theta','Td','z','p0']
+        variables = ['hours','speed','direction','u','v','V','T','theta','Td','z','p0','longwave_upward','longwave_downward']
         for j in variables:
             if i == 0:
                 exec('data.'+j+' = '+j)
@@ -75,3 +80,8 @@ def read_and_process_cabauw_data(years = [], months = []):
                 exec('data.'+j+' = np.concatenate([data.'+j+','+j+'], axis = 0)')
                          
     return data #Return data object with the data as attributes
+
+
+
+if __name__ == '__main__':
+    read_and_process_cabauw_data([2018], [8])

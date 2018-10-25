@@ -8,17 +8,28 @@ Created on Tue Oct 23 11:39:32 2018
 import calendar
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+import settings as s
 import functions as ft
 import read_cabauw_data as r
 import calculate_geostrophic_wind as gw
 import calculate_temperature_gradient as tg
 
 
+mpl.rcParams['axes.titlesize'] = 22
+mpl.rcParams['axes.titleweight'] = 'bold'
+mpl.rcParams['axes.labelsize'] = 22
+mpl.rcParams['axes.labelweight'] = 'bold'
+for j in ('xtick','ytick'):
+    mpl.rcParams[j+'.labelsize'] = 18
+mpl.rcParams['legend.fontsize'] = 18
+
+
 
 #%%
-months = list(range(1,13)) * 6 + list(range(1, 9))
-years = [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
+months = [12] + list(range(1,13)) * 6 + list(range(1, 9))
+years = [2011] + [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
 #months = [1]
 data = r.read_and_process_cabauw_data(years, months)
 gw_data = gw.calculate_geostrophic_wind(years, months)
@@ -102,9 +113,11 @@ V = data.V_18to6utc[:,:,:-1]
 dates = gw_data.dates[:, -1]
 months = np.array([int(j[4:6]) for j in dates.astype('str')])
 
+net_longwave = data.longwave_upward - data.longwave_downward
+
 dtheta = (data.theta[:,:,0] - data.theta[:,:,-2])#.flatten() #Difference in theta between 10 and 200 m
 
-Vg_speed_daymean = np.mean(Vg_speed, axis = (1,2))
+Vg_daymean_speed = np.linalg.norm(np.mean(Vg, axis = (1,2)), axis = -1)
 
 Vg_hours = Vg[:, ::6] 
 Vg_diffs = np.zeros((Vg_hours.shape[0], Vg_hours.shape[1]**2, Vg_hours.shape[2]))
@@ -112,97 +125,59 @@ for j in range(Vg_hours.shape[1]):
     Vg_diffs[:, Vg_hours.shape[1]*j : Vg_hours.shape[1] * (j+1)] = np.linalg.norm(Vg_hours[:,j][:,np.newaxis,:,:] - Vg_hours, axis = -1)
 Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
 
-month_criterion = (months >= 5) & (months <= 7)
-dtheta_criterion = (dtheta[:,0] < 0) & (dtheta[:, 72] > 3)
-Vgspeed_criterion = (Vg_speed_daymean >= 5) & (Vg_speed_daymean <=15)
-Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) < 7.5
-#Check for each day whether the maximum value of Vg_diffs_daymaxes (maximum over the 6 heights) is less
-#than a particular value
-combi_criterion = month_criterion & dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
+
+month_criterion = (months >= 5) & (months <= 7) #Take the months May, June and July, to have a relatively constant daylight period
+longwave_criterion = (np.min(net_longwave, axis = 1) > 20) #Net upward longwave radiation > 20 W/m^2 during the whole 24 hours
+dtheta_criterion = (dtheta[:,0] < 0) & (dtheta[:, 72] > 3) #dtheta(12Z) < 0 K, dtheta(00Z) > 3K
+Vgspeed_criterion = (Vg_daymean_speed >= 5) & (Vg_daymean_speed <= 15) #Norm of vector-averaged geostrophic wind from 18-6 UTC should be between 5 and 15 m/s
+Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) <= 6 #Maximum norm of the difference in geostrophic wind between any 2 times should be less than 6 m/s, 
+#for all 6 heights
+
+combi_criterion = month_criterion & longwave_criterion & dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
+#combi_criterion = np.ones(V.shape[0], dtype = 'bool')
+print('n_dates = ', np.count_nonzero(combi_criterion))
 
 
 
 V_filtered = V[combi_criterion]
 Vg_filtered = Vg[combi_criterion]
 Vg_speed_filtered = Vg_speed[combi_criterion]
-Vg_daymean_filtered = np.zeros(Vg_filtered.shape)
-for j in range(Vg_filtered.shape[0]):
-    Vg_daymean_filtered[j] = np.mean(Vg_filtered[j], axis = 0)
+V_daymean_filtered = np.zeros(V_filtered.shape)
+V_daymean_filtered[:,:] = np.mean(V_filtered, axis = 1)[:,np.newaxis]
+Vg_daymean_filtered = np.zeros(V_filtered.shape)
+Vg_daymean_speed_filtered = np.zeros(Vg_speed_filtered.shape)
+for j in range(V_filtered.shape[0]):
+    Vg_daymean_filtered[j,:] = np.mean(Vg_filtered[j], axis = 0)
+    Vg_daymean_speed_filtered[j,:] = np.mean(Vg_speed_filtered[j], axis = 0)
 
 
 
+"""Normalize V by rotating the wind profile in such a way that the geostrophic wind vector points to the east, and
+scaling the profile by the geostrophic wind speed.
+"""
 angle_rotate = np.arctan2(Vg_daymean_filtered[:,:,:,1], Vg_daymean_filtered[:,:,:,0])
 rot_matrix = np.zeros(V_filtered.shape[:3] + (2, 2))
 rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(angle_rotate)
 rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
-normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_speed_filtered[:,:,:,np.newaxis]
+normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_daymean_speed_filtered[:,:,:,np.newaxis]
 
 
-plt.figure()
-mean_profile_200m = np.mean(normalized_V[:,:,0], axis = 0)
-plt.plot(mean_profile_200m[:, 0], mean_profile_200m[:,1])
+plt.figure(figsize = (15, 10))
+colors = ['green', 'yellow', 'red', 'pink', 'purple', 'blue']
+height_indices = list(range(len(data.z) - 1))
+for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
+    j = height_indices[i]
+    mean_profile = np.mean(normalized_V[:,:,j], axis = 0)
+    plt.plot(mean_profile[:, 0], mean_profile[:, 1], colors[i], linewidth = 3)
+plt.grid()
+plt.xlabel('u / G'); plt.ylabel('v / G')
+plt.title('Normalized wind profiles from 18 to 06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
+plt.legend([str(int(data.z[j]))+' m' for j in height_indices])
+plt.savefig(s.imgs_path+'inertial_oscillation.jpg', dpi = 120, bbox_inches = 'tight')
 plt.show()
 
-
-
-
-#stability_classes = [[-2, 0]]
-#data_classes = {}
-#data_means_classes = {}
-#for c in stability_classes:
-#    data_classes[str(c)] = {}; data_means_classes[str(c)] = {}
-#    in_class = (dtheta >= c[0]) & (dtheta < c[1]) & (Vg_speed_0 <= 7.5)
-#    print(c, np.count_nonzero(in_class))
-#    data_classes[str(c)]['Vg_speed_0'] = Vg_speed_0[in_class]
-#    data_classes[str(c)]['normalized_V'] = normalized_V[in_class]
-#    data_classes[str(c)]['dtheta'] = dtheta[in_class]
-#    
-#    data_means_classes[str(c)]['Vg_speed_0'] = np.mean(data_classes[str(c)]['Vg_speed_0'])
-#    data_means_classes[str(c)]['normalized_V'] = np.mean(data_classes[str(c)]['normalized_V'], axis = 0)
-#    data_means_classes[str(c)]['dtheta'] = np.mean(data_classes[str(c)]['dtheta'])  
-#    
-#plt.figure()
-#for c in stability_classes:
-#    c = str(c)
-#    plt.plot(data_means_classes[c]['normalized_V'][:,0], data_means_classes[c]['normalized_V'][:,1])
-#    plt.xlabel('normalized u (m/s)', fontsize = 12); plt.ylabel('normalized y (m/s)', fontsize = 12)
-#plt.show()
-#%%
-
-#%%
-u200_normalized = normalized_V[:,:,0,0]
-v200_normalized = normalized_V[:,:,0,1]
-V200_normalized = normalized_V[:,:,0,:]
-
-V200_normalized_jan = normalized_V[1:32,:,0,:]
-
-u200_mean_jan = np.mean(u200_normalized[1:32,:])
-v200_mean_jan = np.mean(v200_normalized[1:32,:])
-
-
-plt.figure(figsize = (6,6))
-for i in range(0,31):
-        plt.plot(V200_normalized_jan[i,:,0], V200_normalized_jan[i,:,1])
-#plt.axes().set_aspect('equal', 'box')
-plt.show
-
-theta_unstable_mask = (dtheta < 0)
-theta_unstable = dtheta[theta_unstable_mask]
-V200_normalized_unstable = V200_normalized[theta_unstable_mask] 
-
-Vg200_speed = Vg_speed[:,:,0]
-Vg_mask = (Vg200_speed < 5)
-Vg200_speed_limit = Vg200_speed[Vg_mask]
-V200_normalized_unstable_geolimit = V200_normalized_unstable[Vg_mask] 
-
-plt.figure(figsize = (6,6))
-plt.plot(V200_normalized_unstable[:,0], V200_normalized_unstable[:,1])
+plt.figure(figsize = (15, 10))
+for j in range(normalized_V.shape[0]):
+    plt.plot(normalized_V[j,:,0,0], normalized_V[j, :, 0, 1])
+plt.legend([str(int(j)) for j in dates[combi_criterion]])
 plt.show()
-
-#Vg_speed_unstable = Vg_speed[theta_unstable_mask]
-
-
-
-
-
-        
