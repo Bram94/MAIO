@@ -17,8 +17,8 @@ import calculate_temperature_gradient as tg
 
 
 #%%
-months = [12] + list(range(1,9))
-years = [2017] + [2018] * 8
+months = list(range(1,13)) * 6 + list(range(1, 9))
+years = [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
 #months = [1]
 data = r.read_and_process_cabauw_data(years, months)
 gw_data = gw.calculate_geostrophic_wind(years, months)
@@ -53,27 +53,24 @@ for j in tg_data.__dict__:
 
 
 
-"""
 hour_filter = (data.hours >= 18) | (data.hours <= 6)
 
-for j in data.__dict__:
+for j in data.__dict__.copy():
     if len(eval('data.'+j).shape) >=2:
-        exec('data.'+j+'_filtered = np.reshape(data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (data.'+j+'.shape[2:] if len(data.'+j+'.shape) > 2 else ()))')
+        exec('data.'+j+'_18to6utc = np.reshape(data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (data.'+j+'.shape[2:] if len(data.'+j+'.shape) > 2 else ()))')
 
-for j in gw_data.__dict__:
+for j in gw_data.__dict__.copy():
     if len(eval('gw_data.'+j).shape) >=2:
-        exec('gw_data.'+j+'_filtered = np.reshape(gw_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (gw_data.'+j+'.shape[2:] if len(gw_data.'+j+'.shape) > 2 else ()))')
+        exec('gw_data.'+j+'_18to6utc = np.reshape(gw_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (gw_data.'+j+'.shape[2:] if len(gw_data.'+j+'.shape) > 2 else ()))')
 
-for j in tg_data.__dict__:
+for j in tg_data.__dict__.copy():
     if len(eval('tg_data.'+j).shape) >=2:
-        exec('tg_data.'+j+'_filtered = np.reshape(tg_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (tg_data.'+j+'.shape[2:] if len(tg_data.'+j+'.shape) > 2 else ()))')
-"""        
+        exec('tg_data.'+j+'_18to6utc = np.reshape(tg_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (tg_data.'+j+'.shape[2:] if len(tg_data.'+j+'.shape) > 2 else ()))')
+
         
         
 #%%
-
-theta = data.theta
-
+        
 #Calculate the geostrophic wind and rotate the vectors to the east
  #rotate geostrophic wind vectors to the east
 g = 9.81
@@ -85,34 +82,67 @@ def f_dpdz_dTdz(y): #y = np.array([p, T])
     dpdz = -g/R * p/T
     return np.array([dpdz, dTdz]) #dTdz is defined in the loop below
     
-p_0 = data.p0 * 100. #Pressure at 1.5 m
+p_0 = data.p0_18to6utc * 100. #Pressure at 1.5 m
 p_200m = p_0.copy()
 for i in range(1, len(data.z)):
     z_old = data.z[-i]; z_new = data.z[-(i+1)]
     dz = z_new - z_old
-    dTdz = (data.T[:,:,-(i+1)] - data.T[:,:,-i]) / dz
-    p_200m += ft.RK4(f_dpdz_dTdz, np.array([p_200m, data.T[:,:,-i]]), dz)[0]
-V_thermal = R / f * np.array([[[-1, 1]]]) * tg_data.T_gradient_xy[:,:,::-1] * np.log(p_200m / p_0)[:,:,np.newaxis]
+    dTdz = (data.T_18to6utc[:,:,-(i+1)] - data.T_18to6utc[:,:,-i]) / dz
+    p_200m += ft.RK4(f_dpdz_dTdz, np.array([p_200m, data.T_18to6utc[:,:,-i]]), dz)[0]
+V_thermal_18to6utc = R / f * np.array([[[-1, 1]]]) * tg_data.T_gradient_xy_18to6utc[:,:,::-1] * np.log(p_200m / p_0)[:,:,np.newaxis]
 
-#%%
+
 # Find the geostrophic wind, rotate the vectors to the east and normalize the wind vectors with the geostrophic wind
-Vg = gw_data.V_g[:,:,np.newaxis,:] + (data.z[np.newaxis, np.newaxis, :-1, np.newaxis] - 1.5) / 198.5 * V_thermal[:,:,np.newaxis,:]
+Vg = gw_data.V_g_18to6utc[:,:,np.newaxis,:] + (data.z[np.newaxis, np.newaxis, :-1, np.newaxis] - 1.5) / 198.5 * V_thermal_18to6utc[:,:,np.newaxis,:]
 Vg_speed = np.linalg.norm(Vg, axis = 3)
-Vg_speed_0 = Vg_speed[:,:,-1]
-V = data.V[:,:,:-1]
+V = data.V_18to6utc[:,:,:-1]
  
-angle_rotate = np.arctan2(Vg[:,:,:,1], Vg[:,:,:,-1])
-rot_matrix = np.zeros(V.shape[:3] + (2, 2))
-rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(angle_rotate)
-rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
-normalized_V = np.matmul(V[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_speed[:,:,:,np.newaxis]
+
 
 #Vg_speed_0 = Vg_speed_0.flatten()
 #normalized_V = np.reshape(normalized_V, (V.shape[0] * V.shape[1], V.shape[2], V.shape[3]))
 dtheta = (data.theta[:,:,0] - data.theta[:,:,-2])#.flatten() #Difference in theta between 10 and 200 m
 
-dtheta_criterion = (dtheta[:,0] < -1) & (dtheta[:, 72] > 3)
+Vg_speed_daymean = np.mean(Vg_speed, axis = (1,2))
+
 Vg_hours = Vg[:, ::6] 
+Vg_diffs = np.zeros((Vg_hours.shape[0], Vg_hours.shape[1]**2, Vg_hours.shape[2]))
+for j in range(Vg_hours.shape[1]):
+    Vg_diffs[:, Vg_hours.shape[1]*j : Vg_hours.shape[1] * (j+1)] = np.linalg.norm(Vg_hours[:,j][:,np.newaxis,:,:] - Vg_hours, axis = -1)
+Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
+
+dtheta_criterion = (dtheta[:,0] < 0) & (dtheta[:, 72] > 3)
+Vgspeed_criterion = (Vg_speed_daymean >= 5) & (Vg_speed_daymean <=15)
+Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) < 5
+#Check for each day whether the maximum value of Vg_diffs_daymaxes (maximum over the 6 heights) is less
+#than a particular value
+combi_criterion = dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
+print(np.count_nonzero(combi_criterion))
+
+V_filtered = V[combi_criterion]
+Vg_filtered = Vg[combi_criterion]
+Vg_speed_filtered = Vg_speed[combi_criterion]
+Vg_daymean_filtered = np.zeros(Vg_filtered.shape)
+for j in range(Vg_filtered.shape[0]):
+    Vg_daymean_filtered[j] = np.mean(Vg_filtered[j], axis = 0)
+print(Vg_filtered[0].shape, np.mean(Vg_filtered[0], axis = 0))
+print(Vg_daymean_filtered)
+
+
+
+angle_rotate = np.arctan2(Vg_daymean_filtered[:,:,:,1], Vg_daymean_filtered[:,:,:,0])
+rot_matrix = np.zeros(V_filtered.shape[:3] + (2, 2))
+rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(angle_rotate)
+rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
+normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_speed_filtered[:,:,:,np.newaxis]
+
+
+plt.figure()
+mean_profile_200m = np.mean(normalized_V[:,:,0], axis = 0)
+plt.plot(mean_profile_200m[:, 0], mean_profile_200m[:,1])
+plt.show()
+
+
 
 
 #stability_classes = [[-2, 0]]
