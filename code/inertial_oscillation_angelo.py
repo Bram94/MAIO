@@ -28,8 +28,8 @@ mpl.rcParams['legend.fontsize'] = 18
 
 
 #%%
-months = [12] + list(range(1,13)) * 6 + list(range(1, 9))
-years = [2011] + [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
+months = list(range(1,13)) * 9 + list(range(1, 9))
+years = [2009] * 12 + [2010] * 12 + [2011] * 12 + [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
 #months = [1]
 data = r.read_and_process_cabauw_data(years, months)
 gw_data = gw.calculate_geostrophic_wind(years, months)
@@ -128,9 +128,9 @@ Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
 
 month_criterion = (months >= 5) & (months <= 7) #Take the months May, June and July, to have a relatively constant daylight period
 longwave_criterion = (np.min(net_longwave, axis = 1) > 20) #Net upward longwave radiation > 20 W/m^2 during the whole 24 hours
-dtheta_criterion = (dtheta[:,0] < 0) & (dtheta[:, 72] > 3) #dtheta(12Z) < 0 K, dtheta(00Z) > 3K
+dtheta_criterion = (np.min(dtheta[:,:36], axis = 1) <= -0.25) & (np.max(dtheta[:, 36:72], axis = 1) >= 3) #min(dtheta(12-18Z)) <= -0.25 K, max(dtheta(18-00Z)0 >= 3K
 Vgspeed_criterion = (Vg_daymean_speed >= 5) & (Vg_daymean_speed <= 15) #Norm of vector-averaged geostrophic wind from 18-6 UTC should be between 5 and 15 m/s
-Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) <= 6 #Maximum norm of the difference in geostrophic wind between any 2 times should be less than 6 m/s, 
+Vgdiff_criterion = (np.max(Vg_diffs_daymaxes, axis = 1) >= 0) & (np.max(Vg_diffs_daymaxes, axis = 1) <= 6) #Maximum norm of the difference in geostrophic wind between any 2 times should be less than 6 m/s, 
 #for all 6 heights
 
 combi_criterion = month_criterion & longwave_criterion & dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
@@ -163,24 +163,46 @@ normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix
 
 
 plt.figure(figsize = (15, 10))
-colors = ['green', 'yellow', 'red', 'pink', 'purple', 'blue', 'black']
+colors = ['green', 'yellow', 'red', 'brown', 'purple', 'blue', 'black']
 height_indices = list(range(len(data.z) - 1))
+legend_handles = []
 for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
     j = height_indices[i]
     mean_profile = np.mean(normalized_V[:,:,j], axis = 0)
-    plt.plot(mean_profile[:, 0], mean_profile[:, 1], colors[i], linewidth = 4)
+    legend_handles += plt.plot(mean_profile[:, 0], mean_profile[:, 1], colors[i], linewidth = 6)
+    
+    diffs = np.linalg.norm(normalized_V[:,:,j] - mean_profile[np.newaxis,:,:], axis = 2)
+    stdevs = np.std(diffs, axis = 0)
+    index_diff = 6
+    normal_vector = np.cross([0, 0, 1], np.concatenate([[mean_profile[index_diff-1] - mean_profile[0] for j in range(1, index_diff//2 + 1)], mean_profile[index_diff:] - mean_profile[:-index_diff], [mean_profile[-1] - mean_profile[-index_diff] for j in range(2, index_diff//2 + 2)]], axis = 0))[:,:2]
+    #Normalize the normal vector
+    normal_vector /= np.linalg.norm(normal_vector, axis = 1)[:, np.newaxis]
+    stdev_points1 = mean_profile - stdevs[:, np.newaxis] * normal_vector
+    stdev_points2 = mean_profile + stdevs[:, np.newaxis] * normal_vector
+    
+    time_step = 6
+    plt.plot(stdev_points1[::time_step, 0], stdev_points1[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
+    plt.plot(stdev_points2[::time_step, 0], stdev_points2[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
+    
+    C = np.array([[1] for j in range(0, stdev_points1.shape[0], time_step)]).T
+    X = np.array([stdev_points1[::time_step,0], stdev_points2[::time_step,0]])
+    Y = np.array([stdev_points1[::time_step,1], stdev_points2[::time_step,1]])
+    cmap = mpl.colors.ListedColormap([colors[i]])
+    plt.pcolormesh(X, Y, C, cmap = cmap, alpha = 0.1, edgecolor = 'none')
+
 #Plot the analytical Ekman profile
 z = np.arange(0,10,0.1)
 u_a = 1. - np.exp(-z) * np.cos(z)
 v_a = np.exp(-z) * np.sin(z)
-plt.plot(u_a, v_a, colors[-1], linewidth = 3)
+legend_handles += plt.plot(u_a, v_a, colors[-1], linewidth = 4)
 
 plt.axes().set_aspect('equal', 'box')
 plt.grid()
-plt.xlim([-0.1, 1.7]); plt.ylim([-0.2, 0.7])
+plt.xlim([-0.1, 1.9]); plt.ylim([-0.5, 0.8])
+plt.xticks([j*0.2 for j in range(10)]); plt.yticks([j*0.2 for j in range(-2, 5)])
 plt.xlabel('u / G'); plt.ylabel('v / G')
-plt.title('Average normalized wind profiles from 18-06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
-plt.legend([str(int(data.z[j]))+' m' for j in height_indices] + ['Ekman'])
+plt.title('Average normalized wind profiles for 18-06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
+plt.legend(legend_handles, [str(int(data.z[j]))+' m' for j in height_indices] + ['Ekman'])
 plt.savefig(s.imgs_path+'inertial_oscillation.jpg', dpi = 120, bbox_inches = 'tight')
 plt.show()
 

@@ -27,13 +27,13 @@ mpl.rcParams['legend.fontsize'] = 18
 
 
 #%%
-months = list(range(1,13)) * 6 + list(range(1, 9))
-years = [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
+months = list(range(1,13)) * 9 + list(range(1, 9))
+years = [2009] * 12 + [2010] * 12 + [2011] * 12 + [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
 #months = list(range(1,9))
 #years = [2018] * 8
 data = r.read_and_process_cabauw_data(years, months)
-tg_data = tg.calculate_temperature_gradient(years, months)
 gw_data = gw.calculate_geostrophic_wind(years, months)
+tg_data = tg.calculate_temperature_gradient(years, months)
 
 
 
@@ -117,7 +117,8 @@ for data_time_range in data_time_ranges:
     for i in range(len(stability_classes)-1, -1, -1):
         c = str(stability_classes[i])
         legend_handles.append(plt.plot(data_means_classes[c]['normalized_V'][:,0], data_means_classes[c]['normalized_V'][:,1], colors[i], linewidth = 6)[0])
-        normal_vector = np.cross([0, 0, 1], np.concatenate([[data_means_classes[c]['normalized_V'][1] - data_means_classes[c]['normalized_V'][0]], data_means_classes[c]['normalized_V'][2:] - data_means_classes[c]['normalized_V'][:-2], [data_means_classes[c]['normalized_V'][-1] - data_means_classes[c]['normalized_V'][-2]]], axis = 0))[:,:2]
+        index_diff = 6
+        normal_vector = np.cross([0, 0, 1], np.concatenate([[data_means_classes[c]['normalized_V'][index_diff-1] - data_means_classes[c]['normalized_V'][0] for j in range(1, index_diff//2 + 1)], data_means_classes[c]['normalized_V'][index_diff:] - data_means_classes[c]['normalized_V'][:-index_diff], [data_means_classes[c]['normalized_V'][-1] - data_means_classes[c]['normalized_V'][-index_diff] for j in range(2, index_diff//2 + 2)]], axis = 0))[:,:2]
         #Normalize the normal vector
         normal_vector /= np.linalg.norm(normal_vector, axis = 1)[:, np.newaxis]
         stdev_points1 = data_means_classes[c]['normalized_V'] - data_stdevs_classes[str(c)]['normalized_V'][:, np.newaxis] * normal_vector
@@ -137,7 +138,7 @@ for data_time_range in data_time_ranges:
     v_a = np.exp(-z) * np.sin(z)
     legend_handles.append(plt.plot(u_a, v_a, colors[-1], linewidth = 3)[0])
     plt.xlim([-0.1, 1.6]); plt.ylim([-0.1, 0.75])
-    plt.xlabel('Normalized u'); plt.ylabel('Normalized v')
+    plt.xlabel('u / G'); plt.ylabel('v / G')
     plt.title('Normalized 10-200 meter wind profile compared to Ekman profile for '+format(data_time_range[0], '02d')+'-'+format(data_time_range[1], '02d')+'Z')
     plt.axes().set_aspect('equal', 'box')
     plt.legend(legend_handles, [str(c) + ' K:  '+str(data_classes_nsamples[str(c)]['normalized_V']) for c in stability_classes[::-1]] + ['Ekman'])
