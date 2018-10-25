@@ -34,6 +34,7 @@ def read_and_process_cabauw_data(years = [], months = []):
     data = Cabauw_Data()
     n_days = 0
     for i in range(len(months)):
+        print('read_cabauw_data', years[i], months[i])
         f = xr.open_dataset(s.data_path+'cesar_tower_meteo_lc1_t10_v1.0_'+years[i]+months[i]+'.nc', decode_times = False)
         time = np.array(f.variables['time']) #Is given in hours, with data every 10 minutes
         z = np.array(f.variables['z'])

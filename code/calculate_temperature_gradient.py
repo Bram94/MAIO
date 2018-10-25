@@ -42,7 +42,7 @@ def calculate_temperature_gradient(years = [], months = []):
         return T_0 + dTdphi * (coords[:,0] - phi_0) + dTdlambda * (coords[:,1] - lambda_0)
     
     for k in range(len(months)):
-        print(months[k])
+        print('calculate_temperature_gradient', years[k], months[k])
         filename = s.data_path+'KNMI_'+years[k]+months[k]+'_hourly_temperature.txt'
         
         if not os.path.exists(filename):
@@ -57,17 +57,15 @@ def calculate_temperature_gradient(years = [], months = []):
         data = np.char.strip(np.loadtxt(filename, dtype='str', delimiter = ','))
         
         """Check for stations with incomplete datasets, and remove these stations from the list"""
-        hours = data[:, 2].astype('int')
-        diff1 = hours[1:] - hours[:-1]
-        test1 = (diff1 > 1) | ((diff1 < 1) & (diff1 > -23))
-        dates = data[:, 1].astype('int')
-        diff2 = dates[1:] - dates[:-1]
-        test2 = diff2 > 1 
-        if np.count_nonzero(test1) > 0 or np.count_nonzero(test2) > 0:
-            data1 = data[1:][test1]
-            data2 = data[1:][test2]
-            stations_remove = np.unique(np.append(data1[:,0], data2[:,0]))
-            data = data[np.logical_and.reduce([data[:,0] != j for j in stations_remove])]
+        stations = data[:,0]
+        stations_unique = np.unique(stations)
+        stations_remove = []
+        for j in stations_unique:
+            if len(stations[stations == j]) < n_days[k] * 24:
+                stations_remove += [j]
+        data_filter = np.logical_and.reduce([data[:,0] != j for j in stations_remove])
+        if not data_filter.all() == True:
+            data = data[data_filter]
         
         stations = data[:,0].astype('int')
         #The stations might not be sorted, and np.unique returns a sorted array by default, which is

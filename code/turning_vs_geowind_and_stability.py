@@ -4,6 +4,7 @@ Created on Thu Oct 11 16:54:13 2018
 
 @author: bramv
 """
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,6 +13,7 @@ import calculate_geostrophic_wind as gw
 
 
 
+#%%
 months = list(range(1, 9))
 #months = [8]
 data = r.read_and_process_cabauw_data(months = months)
@@ -19,6 +21,7 @@ gw_data = gw.calculate_geostrophic_wind(months = months)
 
 
 
+#%%
 #Calculate the angle between the wind at 10m and the geostrophic wind
 alpha = 180./np.pi * np.arccos(np.sum(data.V[:,:,-2] * gw_data.V_g, axis = -1) / (data.speed[:,:,-2] * gw_data.V_g_speed))
 not_nan = np.isnan(alpha) == False

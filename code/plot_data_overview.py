@@ -81,7 +81,7 @@ for i in range(1,9):
     plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12 )
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
-    plt.savefig(s.imgs_path+'00Z-00Z_wind_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'Overview/'+'00Z-00Z_wind_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
@@ -147,7 +147,7 @@ for i in range(1,9):
     plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12 )
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.915,0.5], ncol = 1, labelspacing=0., fontsize = 12 )
-    plt.savefig(s.imgs_path+'00Z-00Z_wind_cycle_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'Overview/'+'00Z-00Z_wind_cycle_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
@@ -177,7 +177,7 @@ for i in range(1,9):
     plt.suptitle('00Z - 00Z', x = 0.5, y = 0.91, fontweight = 'bold', fontsize = 14)
     plt.figlegend(handles_theta, [format(j, '02d')+'z' for j in plot_hours], loc = [0.37,0.05], ncol = 4, labelspacing=0., fontsize = 12)
     plt.figlegend(handles_theta, [format(j, '02d')+'z' for j in plot_hours], loc = [0.925,0.5], ncol = 1, labelspacing=0., fontsize = 12)
-    plt.savefig(s.imgs_path+'00Z-00Z_theta_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'Overview/'+'00Z-00Z_theta_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     #%%
@@ -195,5 +195,5 @@ for i in range(1,9):
     plt.figlegend(handles_windprofile, [format(j, '02d')+'z' for j in plot_hours], loc = [0.44,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
     plt.figlegend(handles_windcycle, [str(j)+' m' for j in plot_heights]+['V_g'], loc = [0.78,0.0625], ncol = 1, labelspacing=0., fontsize = 12)
     
-    plt.savefig(s.imgs_path+'00Z-00Z_combi_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'Overview/'+'00Z-00Z_combi_'+str(year)+format(i, '02d')+'.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()

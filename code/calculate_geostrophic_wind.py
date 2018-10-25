@@ -42,6 +42,7 @@ def calculate_geostrophic_wind(years = [], months = []):
         return p_0 + dpdphi * (coords[:,0] - phi_0) + dpdlambda * (coords[:,1] - lambda_0)
     
     for k in range(len(months)):
+        print('calculate_geostrophic_wind', years[k], months[k])
         filename = s.data_path+'KNMI_'+years[k]+months[k]+'_hourly_pressure.txt'
         
         if not os.path.exists(filename):
@@ -56,23 +57,22 @@ def calculate_geostrophic_wind(years = [], months = []):
         data = np.char.strip(np.loadtxt(filename, dtype='str', delimiter = ','))
         
         """Check for stations with incomplete datasets, and remove these stations from the list"""
-        hours = data[:, 2].astype('int')
-        diff1 = hours[1:] - hours[:-1]
-        test1 = (diff1 > 1) | ((diff1 < 1) & (diff1 > -23))
-        dates = data[:, 1].astype('int')
-        diff2 = dates[1:] - dates[:-1]
-        test2 = diff2 > 1 
-        if np.count_nonzero(test1) > 0 or np.count_nonzero(test2) > 0:
-            data1 = data[1:][test1]
-            data2 = data[1:][test2]
-            stations_remove = np.unique(np.append(data1[:,0], data2[:,0]))
-            data = data[np.logical_and.reduce([data[:,0] != j for j in stations_remove])]
+        stations = data[:,0]
+        stations_unique = np.unique(stations)
+        stations_remove = []
+        for j in stations_unique:
+            if len(stations[stations == j]) < n_days[k] * 24:
+                stations_remove += [j]
+        data_filter = np.logical_and.reduce([data[:,0] != j for j in stations_remove])
+        if not data_filter.all() == True:
+            data = data[data_filter]
                     
         stations = data[:,0].astype('int')
         #The stations might not be sorted, and np.unique returns a sorted array by default, which is
         #not desired here. With the method below this is circumvented.
         stations_unique_indices = np.unique(stations, return_index = True)[1]
         stations_unique = stations[np.sort(stations_unique_indices)] 
+        dates = data[:, 1].astype('int')
         pressures = data[:,3]
         pressures[pressures == ''] = np.nan
         pressures = pressures.astype('float') / 10.
@@ -101,7 +101,7 @@ def calculate_geostrophic_wind(years = [], months = []):
         distances_to_cabauw = {j: ft.haversine(coords_cabauw[0], coords_cabauw[1], coords[j][0], coords[j][1]) for j in coords if not j == cabauw_id}
         max_distance = 75 #km
         selected_stations = [j for j in distances_to_cabauw if distances_to_cabauw[j] < max_distance and j in pressures and not np.isnan(pressures[j][0][0])]
-        #print('selected_stations: ',[j[-1] for j in coords_data if int(j[1][:-1]) in selected_stations and distances_to_cabauw[int(j[1][:-1])] < 75])
+        print('selected_stations: ',[j[-1] for j in coords_data if int(j[1][:-1]) in selected_stations and distances_to_cabauw[int(j[1][:-1])] < 75])
         
         selected_pressures = np.zeros((n_dates, n_times, len(selected_stations)))
         for j in range(len(selected_stations)):
@@ -130,14 +130,15 @@ def calculate_geostrophic_wind(years = [], months = []):
         V_g_interpolated = np.zeros((V_g.shape[0], V_g.shape[1] * 6, 2))
         V_g_interpolated[:, :3] = V_g[:,np.newaxis, 0]; V_g_interpolated[:, -3:] = V_g[:,np.newaxis, -1]
         
-        for i in range(0, V_g.shape[1] - 1):
+        for i in range(V_g.shape[1] - 1):
             V_g_interpolated[:, 3 + 6*i : 9 + 6*i] = V_g[:, np.newaxis, i]
             
+        dates = np.unique(dates)
         V_g = V_g_interpolated
         V_g_speed = np.linalg.norm(V_g, axis = 2)
         V_g_direction = 180./ np.pi * (np.arctan2(V_g[:,:,0], V_g[:,:,1]) + np.pi)
 
-        variables = ['V_g', 'V_g_speed', 'V_g_direction', 'coords_cabauw']
+        variables = ['dates', 'V_g', 'V_g_speed', 'V_g_direction', 'coords_cabauw']
         for j in variables:
             if k == 0:
                 exec('gw_data.'+j+' = '+j)
@@ -151,7 +152,7 @@ if __name__ == '__main__':
     #This part is not executed when importing this script, only when running this as the main script.
     fig, ax = plt.subplots(1, 1)
     
-    gw_data = calculate_geostrophic_wind()
+    gw_data = calculate_geostrophic_wind(years = [2016], months = [6])
 
     ax.plot(gw_data.V_g_speed.flatten())
     plt.show()
