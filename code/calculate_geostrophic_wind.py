@@ -129,11 +129,15 @@ def calculate_geostrophic_wind(years = [], months = []):
         """
         V_g_interpolated = np.zeros((V_g.shape[0], V_g.shape[1] * 6, 2))
         V_g_interpolated[:, :3] = V_g[:,np.newaxis, 0]; V_g_interpolated[:, -3:] = V_g[:,np.newaxis, -1]
+        dates = np.unique(dates)
+        dates_interpolated = np.zeros((n_dates, n_times*6))
+        dates_interpolated[:, :3] = dates[0]; dates_interpolated[:, -3:] = dates[-1]
         
         for i in range(V_g.shape[1] - 1):
             V_g_interpolated[:, 3 + 6*i : 9 + 6*i] = V_g[:, np.newaxis, i]
+            dates_interpolated[:, 3 + 6*i : 9 + 6*i] = dates[i]
             
-        dates = np.unique(dates)
+        dates = dates_interpolated
         V_g = V_g_interpolated
         V_g_speed = np.linalg.norm(V_g, axis = 2)
         V_g_direction = 180./ np.pi * (np.arctan2(V_g[:,:,0], V_g[:,:,1]) + np.pi)
