@@ -99,8 +99,9 @@ V = data.V_18to6utc[:,:,:-1]
  
 
 
-#Vg_speed_0 = Vg_speed_0.flatten()
-#normalized_V = np.reshape(normalized_V, (V.shape[0] * V.shape[1], V.shape[2], V.shape[3]))
+dates = gw_data.dates[:, -1]
+months = np.array([int(j[4:6]) for j in dates.astype('str')])
+
 dtheta = (data.theta[:,:,0] - data.theta[:,:,-2])#.flatten() #Difference in theta between 10 and 200 m
 
 Vg_speed_daymean = np.mean(Vg_speed, axis = (1,2))
@@ -111,13 +112,15 @@ for j in range(Vg_hours.shape[1]):
     Vg_diffs[:, Vg_hours.shape[1]*j : Vg_hours.shape[1] * (j+1)] = np.linalg.norm(Vg_hours[:,j][:,np.newaxis,:,:] - Vg_hours, axis = -1)
 Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
 
+month_criterion = (months >= 5) & (months <= 7)
 dtheta_criterion = (dtheta[:,0] < 0) & (dtheta[:, 72] > 3)
 Vgspeed_criterion = (Vg_speed_daymean >= 5) & (Vg_speed_daymean <=15)
-Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) < 5
+Vgdiff_criterion = np.max(Vg_diffs_daymaxes, axis = 1) < 7.5
 #Check for each day whether the maximum value of Vg_diffs_daymaxes (maximum over the 6 heights) is less
 #than a particular value
-combi_criterion = dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
-print(np.count_nonzero(combi_criterion))
+combi_criterion = month_criterion & dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
+
+
 
 V_filtered = V[combi_criterion]
 Vg_filtered = Vg[combi_criterion]
@@ -125,8 +128,6 @@ Vg_speed_filtered = Vg_speed[combi_criterion]
 Vg_daymean_filtered = np.zeros(Vg_filtered.shape)
 for j in range(Vg_filtered.shape[0]):
     Vg_daymean_filtered[j] = np.mean(Vg_filtered[j], axis = 0)
-print(Vg_filtered[0].shape, np.mean(Vg_filtered[0], axis = 0))
-print(Vg_daymean_filtered)
 
 
 
