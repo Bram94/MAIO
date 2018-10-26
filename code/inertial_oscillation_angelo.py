@@ -189,12 +189,19 @@ for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
     Y = np.array([stdev_points1[::time_step,1], stdev_points2[::time_step,1]])
     cmap = mpl.colors.ListedColormap([colors[i]])
     plt.pcolormesh(X, Y, C, cmap = cmap, alpha = 0.1, edgecolor = 'none')
+    
+    if i == 0:
+        for k in range(0, len(mean_profile), 12):
+            pos = mean_profile[k] + normal_vector[k] * 0.05
+            plt.plot(mean_profile[k, 0], mean_profile[k, 1], colors[i])
+            plt.text(pos[0], pos[1], str(int(data.hours_18to6utc[0, k])), fontsize = 26, fontweight = 'bold')
+
 
 #Plot the analytical Ekman profile
 z = np.arange(0,10,0.1)
 u_a = 1. - np.exp(-z) * np.cos(z)
 v_a = np.exp(-z) * np.sin(z)
-legend_handles += plt.plot(u_a, v_a, colors[-1], linewidth = 4)
+legend_handles += plt.plot(u_a, v_a, colors[-1], linewidth = 5)
 
 plt.axes().set_aspect('equal', 'box')
 plt.grid()
