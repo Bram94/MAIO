@@ -7,17 +7,29 @@ Created on Thu Oct 11 16:54:13 2018
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+import settings as s
 import read_cabauw_data as r
 import calculate_geostrophic_wind as gw
 
 
+mpl.rcParams['axes.titlesize'] = 22
+mpl.rcParams['axes.titleweight'] = 'bold'
+mpl.rcParams['axes.labelsize'] = 22
+mpl.rcParams['axes.labelweight'] = 'bold'
+for j in ('xtick','ytick'):
+    mpl.rcParams[j+'.labelsize'] = 18
+mpl.rcParams['legend.fontsize'] = 18
+
+
 
 #%%
-months = list(range(1, 9))
-#months = [8]
-data = r.read_and_process_cabauw_data(months = months)
-gw_data = gw.calculate_geostrophic_wind(months = months)
+months = list(range(1,13)) * 9 + list(range(1, 9))
+years = [2009] * 12 + [2010] * 12 + [2011] * 12 + [2012] * 12 + [2013] * 12 + [2014] * 12 + [2015] * 12 + [2016] * 12 + [2017] * 12 + [2018] * 8
+#months = [1]
+data = r.read_and_process_cabauw_data(years, months)
+gw_data = gw.calculate_geostrophic_wind(years, months)
 
 
 
@@ -37,6 +49,8 @@ n_bins_deltaV = int(max_deltaV / bin_size_deltaV)
 
 
 
+n_samples_min = 50
+
 max_Vg_speed = Vg_speed.max()
 bin_size_Vgspeed = 2.5 #In m/s
 n_bins_Vgspeed = int(np.ceil(max_Vg_speed / bin_size_Vgspeed))
@@ -45,7 +59,7 @@ alpha_sampledensity_Vgspeed = np.zeros(len(alpha))
 for i in range(n_bins_Vgspeed):
     alpha_mean_Vgspeed_binned[i, 0] = (i + 0.5) * bin_size_Vgspeed
     alphas_in_bin = (Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed)
-    alpha_mean_Vgspeed_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= 10 else np.nan
+    alpha_mean_Vgspeed_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= n_samples_min else np.nan
     for j in range(n_bins_deltaV):
         alphas_in_bin_j = alphas_in_bin & (alpha >= j * bin_size_deltaV) & (alpha < (j+1) * bin_size_deltaV)
         alpha_sampledensity_Vgspeed[alphas_in_bin_j] = np.count_nonzero(alphas_in_bin_j)
@@ -62,7 +76,7 @@ alpha_sampledensity_dtheta = np.zeros(len(alpha))
 for i in range(n_bins_dtheta):
     alpha_mean_dtheta_binned[i, 0] = bins_min_dtheta + (i + 0.5) * bin_size_dtheta
     alphas_in_bin = (dtheta >= bins_min_dtheta + i * bin_size_dtheta) & (dtheta < bins_min_dtheta + (i+1) * bin_size_dtheta)
-    alpha_mean_dtheta_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= 10 else np.nan
+    alpha_mean_dtheta_binned[i, 1] = np.mean(alpha[alphas_in_bin]) if np.count_nonzero(alphas_in_bin) >= n_samples_min else np.nan
     for j in range(n_bins_deltaV):
         alphas_in_bin_j = alphas_in_bin & (alpha >= j * bin_size_deltaV) & (alpha < (j+1) * bin_size_deltaV)
         alpha_sampledensity_dtheta[alphas_in_bin_j] = np.count_nonzero(alphas_in_bin_j) 
@@ -79,25 +93,26 @@ for i in range(n_bins_Vgspeed):
         alpha_mean_Vgspeed_dtheta_binned[i, j, 1] = bins_min_dtheta + (j + 0.5) * bin_size_dtheta
         alphas_in_bin = (Vg_speed >= i * bin_size_Vgspeed) & (Vg_speed < (i+1) * bin_size_Vgspeed) & (dtheta >= bins_min_dtheta + j * bin_size_dtheta) & (dtheta < bins_min_dtheta + (j+1) * bin_size_dtheta)
         alpha_mean_Vgspeed_dtheta_binned[i, j, 2] = np.count_nonzero(alphas_in_bin)
-        #Calculate the mean only when there are at least 10 values to average over
-        alpha_mean_Vgspeed_dtheta_binned[i, j, 3] = np.mean(alpha[alphas_in_bin]) if alpha_mean_Vgspeed_dtheta_binned[i, j, 2] >= 10 else np.nan
+        #Calculate the mean only when there are at least n_samples_min values to average over
+        alpha_mean_Vgspeed_dtheta_binned[i, j, 3] = np.mean(alpha[alphas_in_bin]) if alpha_mean_Vgspeed_dtheta_binned[i, j, 2] >= n_samples_min else np.nan
 
 
 
-fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-ax[0].scatter(Vg_speed, alpha, c = alpha_sampledensity_Vgspeed)
-ax[0].plot(alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-')
-ax[1].scatter(dtheta, alpha, c = alpha_sampledensity_dtheta)
-ax[1].plot(alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-')
-ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$|\\alpha|$ $(\degree)$')
-ax[1].set_xlabel('$\\theta$ (10 m) - $\\theta$ (200 m) (K)'); ax[1].set_ylabel('$|\\alpha|$ $(\degree)$')
-plt.show()
+#%%
+fig, ax = plt.subplots(2, 2, figsize = (20, 20))
+ax[0, 0].scatter(Vg_speed, alpha, c = alpha_sampledensity_Vgspeed)
+ax[0, 0].plot(alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-')
+ax[0, 1].scatter(dtheta, alpha, c = alpha_sampledensity_dtheta)
+ax[0, 1].plot(alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-')
+ax[0, 0].set_xlabel('$\mathbf{||V_g||}$ (m/s)'); ax[0, 0].set_ylabel('$\mathbf{|\\alpha|}$ $\mathbf{(\degree)}$')
+ax[0, 1].set_xlabel('$\mathbf{\\theta}$ (10 m) - $\mathbf{\\theta}$ (200 m) (K)'); ax[0, 1].set_ylabel('$\mathbf{|\\alpha|}$ $\mathbf{(\degree)}$')
 
-fig, ax = plt.subplots(1, 2, figsize = (10, 5))
-im = ax[0].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,2].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[0], orientation = 'horizontal', label = '# of samples per bin')
-im = ax[1].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,3].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
-plt.colorbar(im, ax = ax[1], orientation = 'horizontal', label = '$|\\alpha|$ $(\degree)$')
-ax[0].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[0].set_ylabel('$\\theta$ (10 m) - $\\theta$ (200 m) (K)', labelpad = -5)
-ax[1].set_xlabel('$||\mathbf{V_g}||$ (m/s)'); ax[1].set_ylabel('$\\theta$ (10 m) - $\\theta$ (200 m) (K)', labelpad = -5)
+im = ax[1, 0].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,2].T / np.sum(alpha_mean_Vgspeed_dtheta_binned[:,:,2]), extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
+plt.colorbar(im, ax = ax[1, 0], orientation = 'horizontal', label = 'Fraction of samples per bin')
+im = ax[1, 1].imshow(alpha_mean_Vgspeed_dtheta_binned[:,:,3].T, extent = [0, n_bins_Vgspeed * bin_size_Vgspeed, bins_min_dtheta + n_bins_dtheta * bin_size_dtheta, bins_min_dtheta], aspect = 'auto', cmap = 'jet')
+plt.colorbar(im, ax = ax[1, 1], orientation = 'horizontal', label = '$\mathbf{|\\alpha|}$ $\mathbf{(\degree)}$')
+ax[1, 0].set_xlabel('$\mathbf{||V_g||}$ (m/s)'); ax[1, 0].set_ylabel('$\mathbf{\\theta}$ (10 m) - $\mathbf{\\theta}$ (200 m) (K)', labelpad = -5)
+ax[1, 1].set_xlabel('$\mathbf{||V_g||}$ (m/s)'); ax[1, 1].set_ylabel('$\mathbf{\\theta}$ (10 m) - $\mathbf{\\theta}$ (200 m) (K)', labelpad = -5)
+plt.subplots_adjust(hspace = 0.12, wspace = 0.15)
+plt.savefig(s.imgs_path+'turning_angle.jpg', dpi = 120, bbox_inches = 'tight')
 plt.show()

@@ -64,23 +64,29 @@ for j in tg_data.__dict__:
 
 
 
-hour_filter = (data.hours >= 18) | (data.hours <= 6)
+#%%
+hour_range = [18, 6]
+if hour_range[0] >= hour_range[1]:
+    hour_filter = (data.hours >= hour_range[0]) | (data.hours <= hour_range[1])
+    n_hours = 24 - (hour_range[0] - hour_range[1])
+else:
+    hour_filter = (data.hours >= hour_range[0]) & (data.hours <= hour_range[1])
+    n_hours = hour_range[1] - hour_range[0]
 
+n_hours_times = min([n_hours * 6 + 1, 144])
 for j in data.__dict__.copy():
-    if len(eval('data.'+j).shape) >=2:
-        exec('data.'+j+'_18to6utc = np.reshape(data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (data.'+j+'.shape[2:] if len(data.'+j+'.shape) > 2 else ()))')
+    if len(eval('data.'+j).shape) >=2 and not j.endswith('_18to6utc'):
+        exec('data.'+j+'_18to6utc = np.reshape(data.'+j+'[hour_filter], (n_days_remainingmonths, n_hours_times) + (data.'+j+'.shape[2:] if len(data.'+j+'.shape) > 2 else ()))')
 
 for j in gw_data.__dict__.copy():
-    if len(eval('gw_data.'+j).shape) >=2:
-        exec('gw_data.'+j+'_18to6utc = np.reshape(gw_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (gw_data.'+j+'.shape[2:] if len(gw_data.'+j+'.shape) > 2 else ()))')
+    if len(eval('gw_data.'+j).shape) >=2 and not j.endswith('_18to6utc'):
+        exec('gw_data.'+j+'_18to6utc = np.reshape(gw_data.'+j+'[hour_filter], (n_days_remainingmonths, n_hours_times) + (gw_data.'+j+'.shape[2:] if len(gw_data.'+j+'.shape) > 2 else ()))')
 
 for j in tg_data.__dict__.copy():
-    if len(eval('tg_data.'+j).shape) >=2:
-        exec('tg_data.'+j+'_18to6utc = np.reshape(tg_data.'+j+'[hour_filter], (n_days_remainingmonths, 73) + (tg_data.'+j+'.shape[2:] if len(tg_data.'+j+'.shape) > 2 else ()))')
+    if len(eval('tg_data.'+j).shape) >=2 and not j.endswith('_18to6utc'):
+        exec('tg_data.'+j+'_18to6utc = np.reshape(tg_data.'+j+'[hour_filter], (n_days_remainingmonths, n_hours_times) + (tg_data.'+j+'.shape[2:] if len(tg_data.'+j+'.shape) > 2 else ()))')
 
         
-        
-#%%
         
 #Calculate the geostrophic wind and rotate the vectors to the east
  #rotate geostrophic wind vectors to the east
@@ -126,17 +132,28 @@ for j in range(Vg_hours.shape[1]):
 Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
 
 
-month_criterion = (months >= 5) & (months <= 7) #Take the months May, June and July, to have a relatively constant daylight period
-longwave_criterion = (np.min(net_longwave, axis = 1) > 20) #Net upward longwave radiation > 20 W/m^2 during the whole 24 hours
-dtheta_criterion = (np.min(dtheta[:,:36], axis = 1) <= -0.25) & (np.max(dtheta[:, 36:72], axis = 1) >= 3) #min(dtheta(12-18Z)) <= -0.25 K, max(dtheta(18-00Z)0 >= 3K
+month_range = (1, 12)
+if month_range[0] < month_range[1]:
+    month_criterion = (months >= month_range[0]) & (months <= month_range[1]) #Take the months May, June and July, to have a relatively constant daylight period
+else:
+    month_criterion = (months >= month_range[0]) | (months <= month_range[1])
+longwave_criterion = (np.min(net_longwave, axis = 1) > 10) #Net upward longwave radiation > 20 W/m^2 during the whole 24 hours
+dtheta_criterion = (np.min(dtheta[:,:36], axis = 1) <= -0.1) & (np.max(dtheta[:, 36:72], axis = 1) >= 3) &\
+(np.min(dtheta[:, 54:108], axis = 1) >= 2)# & (np.min(dtheta[:,-36:], axis = 1) <= -0.0)
+#min(dtheta(12-18Z)) <= -0.25 K, max(dtheta(18-00Z)0 >= 3K, min(dtheta(21-06Z)) >= 2K, min(dtheta(06-12Z)) <= -0.25K
 Vgspeed_criterion = (Vg_daymean_speed >= 5) & (Vg_daymean_speed <= 15) #Norm of vector-averaged geostrophic wind from 18-6 UTC should be between 5 and 15 m/s
-Vgdiff_criterion = (np.max(Vg_diffs_daymaxes, axis = 1) >= 0) & (np.max(Vg_diffs_daymaxes, axis = 1) <= 6) #Maximum norm of the difference in geostrophic wind between any 2 times should be less than 6 m/s, 
-#for all 6 heights
+max_Vgdiff = np.max(Vg_diffs_daymaxes, axis = 1)
+Vgdiff_criterion = (max_Vgdiff <= 7.5) & (max_Vgdiff / Vg_daymean_speed <= 0.75)
+#Maximum norm of the difference in geostrophic wind between any 2 times should be less than this value for all 6 heights,
+#and the ratio of max_Vgdiff and Vg_daymean_speed should be at maximum 2/3, in order to keep only cases in which the relative 
+#variation of the geostrophic wind is not so large.
 
 combi_criterion = month_criterion & longwave_criterion & dtheta_criterion & Vgspeed_criterion & Vgdiff_criterion
 #combi_criterion = np.ones(V.shape[0], dtype = 'bool')
-print('n_dates = ', np.count_nonzero(combi_criterion))
+print('n_dates = ', np.count_nonzero(longwave_criterion[month_criterion]), np.count_nonzero(dtheta_criterion[month_criterion]), np.count_nonzero(Vgspeed_criterion[month_criterion]), np.count_nonzero(Vgdiff_criterion[month_criterion]), np.count_nonzero(combi_criterion))
 
+combi_criterion = (np.min(Vg_speed, axis = (1, 2)) >= 5) & (np.max(Vg_speed, axis = (1,2)) <= 15)
+print(combi_criterion.shape, Vgspeed_criterion.shape)
 
 
 V_filtered = V[combi_criterion]
@@ -155,16 +172,17 @@ for j in range(V_filtered.shape[0]):
 """Normalize V by rotating the wind profile in such a way that the geostrophic wind vector points to the east, and
 scaling the profile by the geostrophic wind speed.
 """
-angle_rotate = np.arctan2(Vg_daymean_filtered[:,:,:,1], Vg_daymean_filtered[:,:,:,0])
+angle_rotate = np.arctan2(Vg_filtered[:,:,:,1], Vg_filtered[:,:,:,0])
 rot_matrix = np.zeros(V_filtered.shape[:3] + (2, 2))
 rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(angle_rotate)
 rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
-normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_daymean_speed_filtered[:,:,:,np.newaxis]
+normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_speed_filtered[:,:,:,np.newaxis]
 
 
-plt.figure(figsize = (15, 10))
+plt.figure(figsize = (18, 12))
 colors = ['green', 'yellow', 'red', 'brown', 'purple', 'blue', 'black']
 height_indices = list(range(len(data.z) - 1))
+#height_indices = (0,)
 legend_handles = []
 for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
     j = height_indices[i]
@@ -177,24 +195,26 @@ for i in range(len(height_indices)): #Plot hodographs at 10, 80 and 200 m
     normal_vector = np.cross([0, 0, 1], np.concatenate([[mean_profile[index_diff-1] - mean_profile[0] for j in range(1, index_diff//2 + 1)], mean_profile[index_diff:] - mean_profile[:-index_diff], [mean_profile[-1] - mean_profile[-index_diff] for j in range(2, index_diff//2 + 2)]], axis = 0))[:,:2]
     #Normalize the normal vector
     normal_vector /= np.linalg.norm(normal_vector, axis = 1)[:, np.newaxis]
-    stdev_points1 = mean_profile - stdevs[:, np.newaxis] * normal_vector
-    stdev_points2 = mean_profile + stdevs[:, np.newaxis] * normal_vector
+    if True:
+        stdev_points1 = mean_profile - stdevs[:, np.newaxis] * normal_vector
+        stdev_points2 = mean_profile + stdevs[:, np.newaxis] * normal_vector
+        
+        time_step = 6
+        plt.plot(stdev_points1[::time_step, 0], stdev_points1[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
+        plt.plot(stdev_points2[::time_step, 0], stdev_points2[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
+        
+        C = np.array([[1] for j in range(0, stdev_points1.shape[0], time_step)]).T
+        X = np.array([stdev_points1[::time_step,0], stdev_points2[::time_step,0]])
+        Y = np.array([stdev_points1[::time_step,1], stdev_points2[::time_step,1]])
+        cmap = mpl.colors.ListedColormap([colors[i]])
+        plt.pcolormesh(X, Y, C, cmap = cmap, alpha = 0.1, edgecolor = 'none')
     
-    time_step = 6
-    plt.plot(stdev_points1[::time_step, 0], stdev_points1[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
-    plt.plot(stdev_points2[::time_step, 0], stdev_points2[::time_step, 1], colors[i], linestyle = '--', linewidth = 1)
-    
-    C = np.array([[1] for j in range(0, stdev_points1.shape[0], time_step)]).T
-    X = np.array([stdev_points1[::time_step,0], stdev_points2[::time_step,0]])
-    Y = np.array([stdev_points1[::time_step,1], stdev_points2[::time_step,1]])
-    cmap = mpl.colors.ListedColormap([colors[i]])
-    plt.pcolormesh(X, Y, C, cmap = cmap, alpha = 0.1, edgecolor = 'none')
-    
-    if i == 0:
-        for k in range(0, len(mean_profile), 12):
-            pos = mean_profile[k] + normal_vector[k] * 0.05
-            plt.plot(mean_profile[k, 0], mean_profile[k, 1], colors[i])
-            plt.text(pos[0], pos[1], str(int(data.hours_18to6utc[0, k])), fontsize = 26, fontweight = 'bold')
+for j in (0,):
+    for k in range(0, len(mean_profile), 12):
+        mean_profile = np.mean(normalized_V[:,:,j], axis = 0)
+        pos = mean_profile[k] + normal_vector[k] * 0.06
+        plt.plot(mean_profile[k, 0], mean_profile[k, 1], 'black', marker = 'o', markersize = 15)
+        plt.text(pos[0], pos[1], str(int(data.hours_18to6utc[0, k])), fontsize = 26, fontweight = 'bold', horizontalalignment = 'center', verticalalignment = 'center')
 
 
 #Plot the analytical Ekman profile
@@ -205,16 +225,18 @@ legend_handles += plt.plot(u_a, v_a, colors[-1], linewidth = 5)
 
 plt.axes().set_aspect('equal', 'box')
 plt.grid()
-plt.xlim([-0.1, 1.9]); plt.ylim([-0.5, 0.8])
-plt.xticks([j*0.2 for j in range(10)]); plt.yticks([j*0.2 for j in range(-2, 5)])
+plt.xlim([-0.1, 1.2]); plt.ylim([-0.2, 0.6])
+plt.xticks([j*0.2 for j in range(7)]); plt.yticks([j*0.2 for j in range(-1, 4)])
 plt.xlabel('u / G'); plt.ylabel('v / G')
-plt.title('Average normalized wind profiles for 18-06 UTC based on '+str(np.count_nonzero(combi_criterion))+' cases')
+month_names = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+plt.title('Avg normalized wind profiles for '+format(hour_range[0], '02d')+'-'+format(hour_range[1], '02d')+' UTC based on '+str(np.count_nonzero(combi_criterion))+' cases in '+month_names[month_range[0]]+'-'+month_names[month_range[1]])
 plt.legend(legend_handles, [str(int(data.z[j]))+' m' for j in height_indices] + ['Ekman'])
-plt.savefig(s.imgs_path+'inertial_oscillation.jpg', dpi = 120, bbox_inches = 'tight')
+plt.savefig(s.imgs_path+'inertial_oscillation_onlyVgspeedfilter_'+month_names[month_range[0]]+'-'+month_names[month_range[1]]+'_'+format(hour_range[0], '02d')+'-'+format(hour_range[1], '02d')+' UTC.jpg', dpi = 120, bbox_inches = 'tight')
 plt.show()
 
-plt.figure(figsize = (15, 10))
-for j in range(normalized_V.shape[0]):
-    plt.plot(normalized_V[j,:,0,0], normalized_V[j, :, 0, 1])
-plt.legend([str(int(j)) for j in dates[combi_criterion]])
-plt.show()
+
+#plt.figure(figsize = (15, 10))
+#for j in range(normalized_V.shape[0]):
+#    plt.plot(normalized_V[j,:,0,0], normalized_V[j, :, 0, 1])
+#plt.legend([str(int(j)) for j in dates[combi_criterion]])
+#plt.show()

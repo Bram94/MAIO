@@ -77,9 +77,31 @@ rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(ang
 rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
 normalized_V = np.matmul(V[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_speed[:,:,:,np.newaxis]
 
+
+
+dtheta = (data.theta[:,:,0] - data.theta[:,:,-2])
+
+
+
+dates = gw_data.dates[:, -1]
+months = np.array([int(j[4:6]) for j in dates.astype('str')])
+month_range = (1, 12)
+if month_range[0] < month_range[1]:
+    months_filter = (months >= month_range[0]) & (months <= month_range[1]) #Take the months May, June and July, to have a relatively constant daylight period
+else:
+    months_filter = (months >= month_range[0]) | (months <= month_range[1])
+normalized_V = normalized_V[months_filter]
+V_thermal = V_thermal[months_filter]
+dtheta = dtheta[months_filter]
+Vg_speed_0 = Vg_speed_0[months_filter]
+hours = data.hours[months_filter]
+
+
 Vg_speed_0 = Vg_speed_0.flatten()
-normalized_V = np.reshape(normalized_V, (V.shape[0] * V.shape[1], V.shape[2], V.shape[3]))
-dtheta = (data.theta[:,:,0] - data.theta[:,:,-2]).flatten() #Difference in theta between 10 and 200 m
+normalized_V = np.reshape(normalized_V, (normalized_V.shape[0] * normalized_V.shape[1], normalized_V.shape[2], normalized_V.shape[3]))
+dtheta = dtheta.flatten() #Difference in theta between 10 and 200 m
+
+
 
 
 
@@ -88,6 +110,7 @@ Vg_speed_0_upperlimit = 15
 stability_classes = [[-2, 0], [0, 3], [3, 6], [6, 10]]
 
 data_time_ranges = [[i, i+3] for i in range(0, 24, 3)]
+data_time_ranges = [[0, 24]]
 for data_time_range in data_time_ranges:
     data_classes = {}
     data_means_classes = {}
@@ -98,9 +121,9 @@ for data_time_range in data_time_ranges:
         data_classes[str(c)] = {}; data_means_classes[str(c)] = {}; data_stdevs_classes[str(c)] = {}; data_classes_nsamples[str(c)] = {}
         in_class = (dtheta >= c[0]) & (dtheta < c[1]) & (Vg_speed_0 >= Vg_speed_0_lowerlimit) & (Vg_speed_0 <= Vg_speed_0_upperlimit)
         if data_time_range[0] < data_time_range[1]:
-            time_criterion = (data.hours.flatten() >= data_time_range[0]) & (data.hours.flatten() <= data_time_range[1])
+            time_criterion = (hours.flatten() >= data_time_range[0]) & (hours.flatten() <= data_time_range[1])
         else:
-            time_criterion = (data.hours.flatten() >= data_time_range[0]) | (data.hours.flatten() <= data_time_range[1])
+            time_criterion = (hours.flatten() >= data_time_range[0]) | (hours.flatten() <= data_time_range[1])
         in_class = in_class & (np.linalg.norm(V_thermal, axis = 2).flatten() < 2) & time_criterion
         
         data_classes[str(c)]['normalized_V'] = normalized_V[in_class]    
@@ -114,8 +137,11 @@ for data_time_range in data_time_ranges:
     plt.figure(figsize = (20, 10))
     colors = ['blue', 'red', 'green', 'yellow', 'black']
     legend_handles = []
+    min_samples = 10
     for i in range(len(stability_classes)-1, -1, -1):
         c = str(stability_classes[i])
+        if data_classes_nsamples[str(c)]['normalized_V'] < min_samples: continue #Plot only if at least 10 samples
+    
         legend_handles.append(plt.plot(data_means_classes[c]['normalized_V'][:,0], data_means_classes[c]['normalized_V'][:,1], colors[i], linewidth = 6)[0])
         index_diff = 4
         normal_vector = np.cross([0, 0, 1], np.concatenate([[data_means_classes[c]['normalized_V'][index_diff-1] - data_means_classes[c]['normalized_V'][0] for j in range(1, index_diff//2 + 1)], data_means_classes[c]['normalized_V'][index_diff:] - data_means_classes[c]['normalized_V'][:-index_diff], [data_means_classes[c]['normalized_V'][-1] - data_means_classes[c]['normalized_V'][-index_diff] for j in range(2, index_diff//2 + 2)]], axis = 0))[:,:2]
@@ -139,11 +165,12 @@ for data_time_range in data_time_ranges:
     legend_handles.append(plt.plot(u_a, v_a, colors[-1], linewidth = 3)[0])
     plt.xlim([-0.1, 1.6]); plt.ylim([-0.1, 0.75])
     plt.xlabel('u / G'); plt.ylabel('v / G')
-    plt.title('Normalized 10-200 meter wind profile compared to Ekman profile for '+format(data_time_range[0], '02d')+'-'+format(data_time_range[1], '02d')+'Z')
+    month_names = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    plt.title('Normalized 10-200 meter wind profile compared to Ekman profile for '+format(data_time_range[0], '02d')+'-'+format(data_time_range[1], '02d')+'Z in '+month_names[month_range[0]]+'-'+month_names[month_range[1]])
     plt.axes().set_aspect('equal', 'box')
-    plt.legend(legend_handles, [str(c) + ' K:  '+str(data_classes_nsamples[str(c)]['normalized_V']) for c in stability_classes[::-1]] + ['Ekman'])
+    plt.legend(legend_handles, [str(c) + ' K:  '+str(data_classes_nsamples[str(c)]['normalized_V']) for c in stability_classes[::-1] if data_classes_nsamples[str(c)]['normalized_V'] >= min_samples] + ['Ekman'])
     plt.grid()
-    plt.savefig(s.imgs_path+'normalized_BL_windprofile_'+str(data_time_range[0])+'-'+str(data_time_range[1])+'Z.jpg', dpi = 120, bbox_inches = 'tight')
+    plt.savefig(s.imgs_path+'normalized_BL_windprofile_'+month_names[month_range[0]]+'-'+month_names[month_range[1]]+'_'+str(data_time_range[0])+'-'+str(data_time_range[1])+'Z.jpg', dpi = 120, bbox_inches = 'tight')
     plt.show()
     
     
