@@ -132,7 +132,7 @@ for j in range(Vg_hours.shape[1]):
 Vg_diffs_daymaxes = np.max(Vg_diffs, axis = 1)
 
 
-month_range = (1, 12)
+month_range = (5, 7)
 if month_range[0] < month_range[1]:
     month_criterion = (months >= month_range[0]) & (months <= month_range[1]) #Take the months May, June and July, to have a relatively constant daylight period
 else:
@@ -174,6 +174,37 @@ rot_matrix = np.zeros(V_filtered.shape[:3] + (2, 2))
 rot_matrix[:,:,:,0,0] = np.cos(angle_rotate); rot_matrix[:,:,:,0,1] = np.sin(angle_rotate)
 rot_matrix[:,:,:,1,0] = - np.sin(angle_rotate); rot_matrix[:,:,:,1,1] = np.cos(angle_rotate)
 normalized_V = np.matmul(V_filtered[:,:,:,np.newaxis,:], np.transpose(rot_matrix, axes = [0,1,2,4,3]))[:,:,:,0] / Vg_daymean_speed_filtered[:,:,:,np.newaxis]
+
+
+
+mean_theta_filtered = np.mean(data.theta[combi_criterion], axis = 0)
+
+
+
+#%%
+"""Plot the difference in theta between 2 subsequent heights, to indicate the stability
+at different heights
+"""
+
+
+month_names = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+colors = ['green', 'yellow', 'red', 'brown', 'purple', 'blue', 'black']
+
+int_hours = data.hours[0].astype('int')
+hour_indices = np.unique(int_hours, return_index = True)[1][::2]
+plt.figure(figsize = (18, 12))
+for i in range(mean_theta_filtered.shape[1]):
+    plt.plot(mean_theta_filtered[:,i], colors[i], linewidth = 3)
+    plt.xticks(np.append(hour_indices, len(int_hours)+1))
+    plt.axes().set_xticklabels(np.append(int_hours[hour_indices], 12))
+plt.legend([str(int(data.z[i]))+' m' for i in range(data.z.shape[0])])
+plt.xlabel('Hour (UTC)'); plt.ylabel('$\mathbf{\\theta}$ (K)')
+plt.grid()
+plt.title('Daily cycle of average potential temperature for '+str(np.count_nonzero(combi_criterion))+' cases in '+month_names[month_range[0]]+'-'+month_names[month_range[1]])
+plt.savefig(s.imgs_path+'avg_pottemp_'+month_names[month_range[0]]+'-'+month_names[month_range[1]]+'_'+format(hour_range[0], '02d')+'-'+format(hour_range[1], '02d')+' UTC.jpg', dpi = 120, bbox_inches = 'tight')
+plt.show()
+#%%
+
 
 
 plt.figure(figsize = (18, 12))
@@ -224,7 +255,6 @@ plt.grid()
 plt.xlim([-0.1, 1.9]); plt.ylim([-0.5, 0.8])
 plt.xticks([j*0.2 for j in range(10)]); plt.yticks([j*0.2 for j in range(-2, 5)])
 plt.xlabel('u / G'); plt.ylabel('v / G')
-month_names = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
 plt.title('Avg normalized wind profiles for '+format(hour_range[0], '02d')+'-'+format(hour_range[1], '02d')+' UTC based on '+str(np.count_nonzero(combi_criterion))+' cases in '+month_names[month_range[0]]+'-'+month_names[month_range[1]])
 plt.legend(legend_handles, [str(int(data.z[j]))+' m' for j in height_indices] + ['Ekman'])
 plt.savefig(s.imgs_path+'inertial_oscillation_'+month_names[month_range[0]]+'-'+month_names[month_range[1]]+'_'+format(hour_range[0], '02d')+'-'+format(hour_range[1], '02d')+' UTC.jpg', dpi = 120, bbox_inches = 'tight')

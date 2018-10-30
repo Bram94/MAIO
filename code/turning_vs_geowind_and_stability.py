@@ -101,9 +101,9 @@ for i in range(n_bins_Vgspeed):
 #%%
 fig, ax = plt.subplots(2, 2, figsize = (20, 20))
 ax[0, 0].scatter(Vg_speed, alpha, c = alpha_sampledensity_Vgspeed)
-ax[0, 0].plot(alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-')
+ax[0, 0].plot(alpha_mean_Vgspeed_binned[:,0], alpha_mean_Vgspeed_binned[:,1], 'r-', linewidth = 5)
 ax[0, 1].scatter(dtheta, alpha, c = alpha_sampledensity_dtheta)
-ax[0, 1].plot(alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-')
+ax[0, 1].plot(alpha_mean_dtheta_binned[:,0], alpha_mean_dtheta_binned[:,1], 'r-', linewidth = 5)
 ax[0, 0].set_xlabel('$\mathbf{||V_g||}$ (m/s)'); ax[0, 0].set_ylabel('$\mathbf{|\\alpha|}$ $\mathbf{(\degree)}$')
 ax[0, 1].set_xlabel('$\mathbf{\\theta}$ (10 m) - $\mathbf{\\theta}$ (200 m) (K)'); ax[0, 1].set_ylabel('$\mathbf{|\\alpha|}$ $\mathbf{(\degree)}$')
 
